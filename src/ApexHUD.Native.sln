@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexHUD.Native.Common", "ApexHUD.Native.Common\ApexHUD.Native.Common.csproj", "{927A4E16-C6C0-4815-8A05-C3F50B888EAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexHUD.Native.Data", "ApexHUD.Native.Data\ApexHUD.Native.Data.csproj", "{479116EB-72F8-452E-961B-5F42E987D9A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexHUD.Native.Overlays", "ApexHUD.Native.Overlays\ApexHUD.Native.Overlays.csproj", "{05D9D6CC-F8D3-48B7-AAB2-38E86BE11681}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexHUD.Native.Harness", "ApexHUD.Native.Harness\ApexHUD.Native.Harness.csproj", "{27984362-CD3D-4FC1-96DB-2A7A98CF0D7E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexHUD.Native.GpuHost", "ApexHUD.Native.GpuHost\ApexHUD.Native.GpuHost.csproj", "{E1992FCE-8885-446D-9E32-07D008316251}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{927A4E16-C6C0-4815-8A05-C3F50B888EAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{927A4E16-C6C0-4815-8A05-C3F50B888EAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{927A4E16-C6C0-4815-8A05-C3F50B888EAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{927A4E16-C6C0-4815-8A05-C3F50B888EAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{479116EB-72F8-452E-961B-5F42E987D9A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{479116EB-72F8-452E-961B-5F42E987D9A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{479116EB-72F8-452E-961B-5F42E987D9A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{479116EB-72F8-452E-961B-5F42E987D9A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05D9D6CC-F8D3-48B7-AAB2-38E86BE11681}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05D9D6CC-F8D3-48B7-AAB2-38E86BE11681}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05D9D6CC-F8D3-48B7-AAB2-38E86BE11681}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05D9D6CC-F8D3-48B7-AAB2-38E86BE11681}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27984362-CD3D-4FC1-96DB-2A7A98CF0D7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27984362-CD3D-4FC1-96DB-2A7A98CF0D7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27984362-CD3D-4FC1-96DB-2A7A98CF0D7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27984362-CD3D-4FC1-96DB-2A7A98CF0D7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1992FCE-8885-446D-9E32-07D008316251}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{E1992FCE-8885-446D-9E32-07D008316251}.Debug|Any CPU.Build.0 = Debug|x64
+		{E1992FCE-8885-446D-9E32-07D008316251}.Release|Any CPU.ActiveCfg = Release|x64
+		{E1992FCE-8885-446D-9E32-07D008316251}.Release|Any CPU.Build.0 = Release|x64
+	EndGlobalSection
+EndGlobal

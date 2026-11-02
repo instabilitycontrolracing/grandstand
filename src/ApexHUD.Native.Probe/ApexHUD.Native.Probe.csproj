@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>apexhud-probe</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IRSDKSharper" Version="1.1.6" />
+  </ItemGroup>
+</Project>

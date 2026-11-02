@@ -1,0 +1,112 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <!-- We reference the WPF overlay assembly purely for its renderers +
+         SceneDirector + PresentationState statics. UseWPF makes the WPF
+         framework types those expose (App : Application) resolvable at compile
+         time. The host itself never starts WPF — it owns a native GL window. -->
+    <UseWPF>true</UseWPF>
+    <!-- #48 stage 1 (2026-10-27): the program people see is Grandstand.exe (code names stay ApexHUD.Native.* for now) -->
+    <AssemblyName>Grandstand</AssemblyName>
+    <Product>Grandstand</Product>
+    <!-- 2026-10-29 (efficiency): written out so nobody flips them by accident - one small GC heap (workstation, not one
+         heap per core), collections in the background, profile-guided JIT for the hot draw code, and the GC keeps its
+         freed memory segments instead of handing them to Windows and asking again (fewer page faults mid-race) -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApexHUD.Native.Common\ApexHUD.Native.Common.csproj" />
+    <ProjectReference Include="..\ApexHUD.Native.Data\ApexHUD.Native.Data.csproj" />
+    <ProjectReference Include="..\ApexHUD.Native.Overlays\ApexHUD.Native.Overlays.csproj" />
+  </ItemGroup>
+
+  <!-- SkiaSharp 2.88.8 to MATCH the renderers (which compile against
+       SkiaSharp.Views.WPF 2.88.8). The GPU host hands the renderers a raw
+       SKCanvas, so the SKCanvas type identity must be the same assembly version.
+       3.119.4 (the POC version, forced there by OverlaySharp) would be a
+       different SKCanvas type and removed APIs the renderers use (SKFilterQuality)
+       — see DECISIONS.md. The GL/WGL interop technique is version-independent. -->
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.8" />
+  </ItemGroup>
+
+  <!-- Bundled broadcast assets, copied next to the exe so the reused renderers
+       resolve them via Assets (AppContext.BaseDirectory/assets) — same set the
+       WPF overlay copies. -->
+  <!-- Grandstand control app (2026-10-23): the web page served by ControlServer. -->
+  <ItemGroup>
+    <Content Include="control\**\*.*" Link="control\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- 2026-10-26 (#30): Spout2 (BSD-2 licence, leadedge/Spout2 2.007.018) for the OBS stream output -->
+  <ItemGroup>
+    <Content Include="native\**\*.*" Link="native\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- clock faces: the bundled homage dials, plus the personal dial.png when it is on this PC (never in git) -->
+    <Content Include="..\..\assets\clock\*.png" Link="assets\clock\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\fonts\**\*.ttf" Link="assets\fonts\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\fonts\**\OFL.txt" Link="assets\fonts\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\flags\*.png" Link="assets\flags\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\audio\*.*" Link="assets\audio\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- 2026-10-24: original sounds (tools/make_sfx.py, CC0) used when assets\audio\<name> (personal, never in git) is absent -->
+    <Content Include="..\..\assets\audio_public\*.wav" Link="assets\audio_public\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- font licences (SIL OFL 1.1) -->
+    <Content Include="..\..\assets\licenses\*.txt" Link="assets\licenses\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\tracks\*.png" Link="assets\logos\tracks\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\geo\*.bin" Link="assets\geo\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>    <Content Include="..\..\assets\maps\*.*" Link="assets\maps\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\manufacturers\*.png" Link="assets\logos\manufacturers\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\series\*.png" Link="assets\logos\series\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\iracing-brand\*.png" Link="assets\logos\iracing-brand\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\sponsors\*.png" Link="assets\logos\sponsors\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\transitions\frames\**\*.jpg" Link="assets\transitions\frames\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

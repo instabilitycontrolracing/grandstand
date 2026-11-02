@@ -1,0 +1,65 @@
+[
+ {
+  "name": "global",
+  "file": "global.jpg",
+  "lon0": -180,
+  "lon1": 180,
+  "lat0": -90,
+  "lat1": 90,
+  "ppd": 22.755555555555556
+ },
+ {
+  "name": "europe",
+  "file": "europe.jpg",
+  "lon0": -20,
+  "lon1": 45,
+  "lat0": 28,
+  "lat1": 68,
+  "ppd": 100
+ },
+ {
+  "name": "namerica",
+  "file": "namerica.jpg",
+  "lon0": -130,
+  "lon1": -60,
+  "lat0": 14,
+  "lat1": 58,
+  "ppd": 100
+ },
+ {
+  "name": "samerica",
+  "file": "samerica.jpg",
+  "lon0": -82,
+  "lon1": -34,
+  "lat0": -56,
+  "lat1": 6,
+  "ppd": 100
+ },
+ {
+  "name": "japan",
+  "file": "japan.jpg",
+  "lon0": 122,
+  "lon1": 150,
+  "lat0": 24,
+  "lat1": 46,
+  "ppd": 100
+ },
+ {
+  "name": "oceania",
+  "file": "oceania.jpg",
+  "lon0": 110,
+  "lon1": 180,
+  "lat0": -50,
+  "lat1": -8,
+  "ppd": 100
+ },
+ {
+  "name": "safrica",
+  "file": "safrica.jpg",
+  "lon0": 10,
+  "lon1": 40,
+  "lat0": -36,
+  "lat1": -18,
+  "ppd": 100
+ }
+]

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux/any-OS preview of the built-in class transition (ProceduralStinger) and the drawn car panel (CarArt).
+       Compiles the real Overlays sources it needs; run ./run.sh (fonts: point GS_FONTS at a folder holding
+       inter/, barlow-condensed/ like assets/fonts). Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS0162;CS0414;CS0169</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/ApexHUD.Native.Overlays/ProceduralStinger.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/CarArt.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/CarPhotos.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/Assets.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/Fonts.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/ClassColors.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/ClassLogo.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/BroadcastPalette.cs" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>

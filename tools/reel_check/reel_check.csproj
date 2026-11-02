@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Highlight reel plan checks (2026-10-29, #9): the moment list builder and the camera pick
+       (ApexHUD.Native.Common/HighlightReel.cs) against sample marker files. Runs against the BUILT Common assembly
+       (GsBin, default the Common Release output). Exit code 0 = all checks pass. See run.sh. Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GsBin Condition="'$(GsBin)' == ''">$(MSBuildThisFileDirectory)../../src/ApexHUD.Native.Common/bin/Release/net8.0-windows</GsBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ApexHUD.Native.Common"><HintPath>$(GsBin)/ApexHUD.Native.Common.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

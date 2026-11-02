@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2026-10-27: offline renders of the TV loading splash (LoadingSplash.cs linked from the GpuHost as source) against the
+       BUILT Overlays / Common assemblies (GsBin, default the GpuHost Release output). Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GsBin Condition="'$(GsBin)' == ''">$(MSBuildThisFileDirectory)../../src/ApexHUD.Native.GpuHost/bin/Release/net8.0-windows</GsBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/ApexHUD.Native.GpuHost/LoadingSplash.cs" Link="LoadingSplash.cs" />
+    <Reference Include="ApexHUD.Native.Overlays"><HintPath>$(GsBin)/ApexHUD.Native.Overlays.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Common"><HintPath>$(GsBin)/ApexHUD.Native.Common.dll</HintPath></Reference>
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>

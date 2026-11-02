@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 2026-10-28: per-track packs (TrackPacks.cs), built by tools/track_data_gen/build_tracks.py -->
+    <EmbeddedResource Include="TrackData\tracks.json" LogicalName="ApexHUD.Native.Common.TrackData.tracks.json" />
+  </ItemGroup>
+
+</Project>

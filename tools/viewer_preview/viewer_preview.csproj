@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2026-10-29 (#494): the viewer cards (Super Chat ticker item, member card, big-amount banner, track fund) and
+       the Halloween theme on the tower + session bar, drawn by the BUILT app assemblies (GsBin) at 1920x1080. See run.sh. Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GsBin Condition="'$(GsBin)' == ''">$(MSBuildThisFileDirectory)../../src/ApexHUD.Native.GpuHost/bin/Release/net8.0-windows</GsBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../visual_pack/Canned.cs" />
+    <Compile Include="../visual_pack/Comp.cs" />
+    <Compile Include="../stinger_bench/Egl.cs" />
+    <Reference Include="ApexHUD.Native.Overlays"><HintPath>$(GsBin)/ApexHUD.Native.Overlays.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Common"><HintPath>$(GsBin)/ApexHUD.Native.Common.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Data"><HintPath>$(GsBin)/ApexHUD.Native.Data.dll</HintPath></Reference>
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>

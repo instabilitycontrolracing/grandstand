@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApexHUD.Native.Common\ApexHUD.Native.Common.csproj" />
+    <ProjectReference Include="..\ApexHUD.Native.Data\ApexHUD.Native.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.8" />
+  </ItemGroup>
+
+  <!-- Bundled broadcast assets, copied next to the exe so SkiaSharp can load
+       them at runtime via the Assets helper (AppContext.BaseDirectory/assets). -->
+  <ItemGroup>
+    <!-- clock faces: the bundled homage dials, plus the personal dial.png when it is on this PC (never in git) -->
+    <Content Include="..\..\assets\clock\*.png" Link="assets\clock\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\fonts\**\*.ttf" Link="assets\fonts\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\fonts\**\OFL.txt" Link="assets\fonts\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\flags\*.png" Link="assets\flags\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\audio\*.*" Link="assets\audio\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- 2026-10-24: original sounds (tools/make_sfx.py, CC0) used when assets\audio\<name> (personal, never in git) is absent -->
+    <Content Include="..\..\assets\audio_public\*.wav" Link="assets\audio_public\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- font licences (SIL OFL 1.1) -->
+    <Content Include="..\..\assets\licenses\*.txt" Link="assets\licenses\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\tracks\*.png" Link="assets\logos\tracks\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\geo\*.bin" Link="assets\geo\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\globe\*.*" Link="assets\globe\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>    <Content Include="..\..\assets\maps\*.*" Link="assets\maps\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\manufacturers\*.png" Link="assets\logos\manufacturers\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\series\*.png" Link="assets\logos\series\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\classes\*.png" Link="assets\logos\classes\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\iracing-brand\*.png" Link="assets\logos\iracing-brand\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\logos\sponsors\*.png" Link="assets\logos\sponsors\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Phase 2 tower transition frame sequences (pre-extracted JPEGs at lane
+         width). Played as the splash background for scenes that have a clip. -->
+    <Content Include="..\..\assets\transitions\frames\**\*.jpg" Link="assets\transitions\frames\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>

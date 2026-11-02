@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2026-10-27 (W10 PiP): live check whether iRacing fills CarIdxSteer / CarIdxGear / CarIdxRPM for OTHER cars.
+       Run on the PC during a live session (and once in a replay for comparison). Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>carIdx_probe</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IRSDKSharper" Version="1.1.6" />
+  </ItemGroup>
+</Project>

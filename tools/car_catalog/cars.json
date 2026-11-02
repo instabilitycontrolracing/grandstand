@@ -1,0 +1,2792 @@
+[
+ {
+  "car_id": 170,
+  "car_path": "acuraarx06gtp",
+  "name": "Acura ARX-06 GTP",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "Acura",
+  "maker": "Acura",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   8530,
+   9090,
+   9300,
+   9400,
+   9455,
+   9700,
+   9700
+  ],
+  "story": "Oreca-built successor to the ARX-05 DPi; finished 1-2 on debut at the 2023 Rolex 24 (MSR and WTR).",
+  "sources": [
+   "https://www.iracing.com/cars/acura-arx-06-gtp/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/acuraarx06gtp.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 194,
+  "car_path": "acuransxevo22gt3",
+  "name": "Acura NSX GT3 EVO 22",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Acura",
+  "maker": "Acura",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": true,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7375,
+   7375,
+   7375,
+   7375,
+   7325,
+   7450
+  ],
+  "story": "Won Petit Le Mans in its 2022 debut season with Gradient Racing.",
+  "sources": [
+   "https://www.iracing.com/cars/acura-nsx-gt3-evo22/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/acuransxevo22gt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 212,
+  "car_path": "amvalkyriegtp",
+  "name": "Aston Martin Valkyrie AMR-LMH",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "Aston",
+  "maker": "Aston",
+  "hybrid": false,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000
+  ],
+  "story": "First V12 in top-tier prototype racing in nearly 15 years; Adrian Newey design; first IMSA podium at Petit Le Mans 2025.",
+  "sources": [
+   "https://www.iracing.com/cars/aston-martin-valkyrie-amr-lmh/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/amvalkyriegtp.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 206,
+  "car_path": "amvantageevogt3",
+  "name": "Aston Martin Vantage GT3 EVO",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Aston",
+  "maker": "Aston",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6975,
+   6975,
+   6975,
+   6950,
+   6900,
+   6950
+  ],
+  "story": "EVO (2024) won the 2024 Spa 24 Hours overall by over 30 seconds (Comtoyou).",
+  "sources": [
+   "https://www.iracing.com/cars/aston-martin-vantage-gt3-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/amvantageevogt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 150,
+  "car_path": "amvantagegt4",
+  "name": "Aston Martin Vantage GT4",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "Aston",
+  "maker": "Aston",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6550,
+   6600,
+   6700,
+   6750,
+   6750,
+   6750
+  ],
+  "story": "Won SP8T by four laps on debut at the 2019 Nürburgring 24.",
+  "sources": [
+   "https://www.iracing.com/cars/aston-martin-vantage-gt4/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/amvantagegt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 64,
+  "car_path": "astonmartin dbr9",
+  "name": "Aston Martin DBR9 GT1",
+  "class_label": "GT1",
+  "research_class": "GT1",
+  "logo": "Aston",
+  "maker": "Aston",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7550,
+   7550,
+   7550,
+   7550,
+   7550,
+   7550
+  ],
+  "story": "Won on debut at Sebring 2005; GT1 class wins at Le Mans in 2007 and 2008.",
+  "sources": [
+   "https://www.iracing.com/cars/aston-martin-gt1/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/astonmartin-dbr9.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 76,
+  "car_path": null,
+  "name": "Audi 90 GTO",
+  "class_label": "CLASSIC",
+  "research_class": "GTO",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Hans Stuck won seven IMSA GTO races in 1989 yet finished second in points.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-90-gto/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 73,
+  "car_path": null,
+  "name": "Audi R8 LMS GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "200+ international wins; back-to-back Blancpain titles 2014-15.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-r8-lms-gt3/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'audir8gt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 98,
+  "car_path": "audir18",
+  "name": "Audi R18",
+  "class_label": "LMP1",
+  "research_class": "LMP1",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   4700,
+   4700,
+   4700,
+   4700,
+   4700,
+   4700,
+   4700,
+   4700
+  ],
+  "story": "Diesel hybrid LMP1; won Le Mans four times and the WEC title in 2012 and 2013.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-r18-lmp1/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/audir18.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 176,
+  "car_path": "audir8lmsevo2gt3",
+  "name": "Audi R8 LMS EVO II GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   8300,
+   8300,
+   8200,
+   8100,
+   8050,
+   8340
+  ],
+  "story": "Second R8 LMS upgrade (2022): more rear-wing downforce, new intake, 4-way dampers; 2022 DTM manufacturers' title.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-r8-lms-evo-ii-gt3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/audir8lmsevo2gt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 112,
+  "car_path": "audirs3lms",
+  "name": "Audi RS3 LMS TCR",
+  "class_label": "TCR",
+  "research_class": "TCR",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700
+  ],
+  "story": "Voted 'Model of the Year 2018'.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-rs-3-lms-tcr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/audirs3lms.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 210,
+  "car_path": "audirs3lmsgen2",
+  "name": "Audi RS3 LMS Gen2 TCR",
+  "class_label": "TCR",
+  "research_class": "TCR",
+  "logo": "Audi",
+  "maker": "Audi",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650
+  ],
+  "story": "TCR Model of the Year three years running after its 2021 debut.",
+  "sources": [
+   "https://www.iracing.com/cars/audi-rs3-lms-gen2-tcr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/audirs3lmsgen2.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 55,
+  "car_path": null,
+  "name": "BMW Z4 GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Replaced the M3 as BMW Motorsport's GT car; predecessor of the M4 GT3 on iRacing.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-z4-gt3/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'bmwz4gt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 159,
+  "car_path": "bmwlmdh",
+  "name": "BMW M Hybrid V8 (Evo)",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": true,
+  "electric": false,
+  "abs": false,
+  "tc": true,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   7900,
+   7900,
+   7900,
+   7900,
+   7900,
+   7900,
+   7900,
+   7900
+  ],
+  "story": "BMW's return to top-level prototypes in 2023; the original car debuted on iRacing before its first real-world lap. 2026 Evo update for Team WRT.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m-hybrid-v8-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwlmdh.json @ 08db79e",
+   "Angelo's Race Engineer code citing iRacing's BMW manuals (engineer/setup_bank.py, aids.py; Grandstand RaceStateService.cs)"
+  ],
+  "unverified": [
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 195,
+  "car_path": "bmwm2csr",
+  "name": "BMW M2 CS Racing (F87) - 2020",
+  "class_label": "M2",
+  "research_class": "M2",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": true,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   7125,
+   7100,
+   7100,
+   6950,
+   6650,
+   6650,
+   6650
+  ],
+  "story": "Homologated for TCX; its own M2 CS Racing Cup.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m2-cs-racing/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm2csr.json @ 08db79e"
+  ],
+  "unverified": [
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 216,
+  "car_path": "bmwm2g87",
+  "name": "BMW M2 Racing (G87)",
+  "class_label": "M2",
+  "research_class": "M2",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6908,
+   6908,
+   6908,
+   6908,
+   6908,
+   6908,
+   6908,
+   6908
+  ],
+  "story": "New for 2026; top speed 270 km/h; GT3-derived dampers.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m2-racing-g87/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm2g87.json @ 08db79e"
+  ],
+  "unverified": [
+   "Engine: iRacing page says 'twin-turbo inline-four'; not cross-checked with BMW.",
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 189,
+  "car_path": "bmwm4evogt4",
+  "name": "BMW M4 G82 GT4 Evo",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000
+  ],
+  "story": "Class win first time out at the Nürburgring 24; IMSA titles with Turner Motorsport.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m4-g82-gt4-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm4evogt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 132,
+  "car_path": "bmwm4gt3",
+  "name": "BMW M4 GT3 EVO",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": true,
+  "tc": true,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6597,
+   6747,
+   6598,
+   6673,
+   6550,
+   7200
+  ],
+  "story": "Revealed at BMW Sim Live in Dec 2020; its real steering wheel plugs into iRacing. EVO update 2025.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m4-gt3-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm4gt3.json @ 08db79e",
+   "Angelo's Race Engineer code citing iRacing's BMW manuals (engineer/setup_bank.py, aids.py; Grandstand RaceStateService.cs)"
+  ],
+  "unverified": [
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 122,
+  "car_path": "bmwm4gt4",
+  "name": "BMW M4 F82 GT4 - 2018",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   7100,
+   7100,
+   7050,
+   7050,
+   7050,
+   7000,
+   7000
+  ],
+  "story": "'Race Car of the Year' in its 2018 debut season.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m4-f82-gt4/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm4gt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 109,
+  "car_path": "bmwm8gte",
+  "name": "BMW M8 GTE",
+  "class_label": "GTE",
+  "research_class": "GTE",
+  "logo": "BMW",
+  "maker": "BMW",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000
+  ],
+  "story": "BMW's flagship racer in WEC and IMSA; known as hard to pass.",
+  "sources": [
+   "https://www.iracing.com/cars/bmw-m8-gte/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/bmwm8gte.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 26,
+  "car_path": "c6r",
+  "name": "Chevrolet Corvette C6.R GT1",
+  "class_label": "GT1",
+  "research_class": "GT1",
+  "logo": "Corvette",
+  "maker": "Corvette",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6000,
+   6000,
+   6000,
+   6000,
+   6000,
+   6000
+  ],
+  "story": "Four IMSA titles and seven Le Mans/Sebring class wins.",
+  "sources": [
+   "https://www.iracing.com/cars/chevrolet-corvette-c6-r/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/c6r.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 127,
+  "car_path": "c8rvettegte",
+  "name": "Chevrolet Corvette C8.R GTE",
+  "class_label": "GTE",
+  "research_class": "GTE",
+  "logo": "Corvette",
+  "maker": "Corvette",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6900,
+   6900,
+   6900,
+   6900,
+   6900,
+   6900,
+   6900,
+   6900
+  ],
+  "story": "Won at Daytona in only its second race (2020, Garcia/Taylor).",
+  "sources": [
+   "https://www.iracing.com/cars/chevrolet-corvette-c8-r/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/c8rvettegte.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 41,
+  "car_path": "cadillacctsvr",
+  "name": "Cadillac CTS-V Racecar",
+  "class_label": "TOURING",
+  "research_class": "Touring (CTS-V)",
+  "logo": "Cadillac",
+  "maker": "Cadillac",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7400,
+   7400,
+   7400,
+   7400,
+   7400,
+   7400
+  ],
+  "story": "Pratt & Miller chassis; Pirelli World Challenge with O'Connell, Pilgrim, Ricky Taylor.",
+  "sources": [
+   "https://www.iracing.com/cars/cadillac-cts-v/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/cadillacctsvr.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 168,
+  "car_path": "cadillacvseriesrgtp",
+  "name": "Cadillac V-Series.R GTP",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "Cadillac",
+  "maker": "Cadillac",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   8250,
+   8350,
+   8500,
+   8600,
+   8680,
+   8750,
+   8775
+  ],
+  "story": "Succeeds the DPi-V.R that won five straight Rolex 24s (2017-21); first IMSA win at the 2023 Sebring 12 Hours.",
+  "sources": [
+   "https://www.iracing.com/cars/cadillac-v-series-r-gtp/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/cadillacvseriesrgtp.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 218,
+  "car_path": "caterham caterham420r",
+  "name": "Caterham 420R",
+  "class_label": "CATERHAM",
+  "research_class": "Caterham",
+  "logo": null,
+  "maker": "Caterham",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7700,
+   7700,
+   7700,
+   7700,
+   7700,
+   7700
+  ],
+  "story": "Official car of the Seven Championship UK.",
+  "sources": [
+   "https://www.iracing.com/cars/caterham-420r/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/caterham-caterham420r.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 217,
+  "car_path": "caterham caterhamacademy",
+  "name": "Caterham Academy",
+  "class_label": "CATERHAM",
+  "research_class": "Caterham",
+  "logo": null,
+  "maker": "Caterham",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6600,
+   6600,
+   6600,
+   6600,
+   6600,
+   6600
+  ],
+  "story": "Caterham Academy since 1995; road-legal; racers keep the car.",
+  "sources": [
+   "https://www.iracing.com/cars/caterham-academy/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/caterham-caterhamacademy.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 70,
+  "car_path": null,
+  "name": "Chevrolet Corvette C7 Daytona Prototype",
+  "class_label": "DP",
+  "research_class": "DP",
+  "logo": "Corvette",
+  "maker": "Chevrolet",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "Daytona Prototype with Corvette C7 Stingray styling; a regular IMSA winner.",
+  "sources": [
+   "https://www.iracing.com/cars/chevrolet-corvette-c7-daytona-prototype/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'c7vettedp' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 184,
+  "car_path": "chevyvettez06rgt3",
+  "name": "Chevrolet Corvette Z06 GT3.R",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Corvette",
+  "maker": "Corvette",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   7675,
+   7675,
+   7675,
+   7675,
+   7675,
+   7675,
+   7675,
+   7675
+  ],
+  "story": "GT3 successor to the C8.R; Pratt Miller still runs it.",
+  "sources": [
+   "https://www.iracing.com/cars/chevrolet-corvette-z06-gt3r/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/chevyvettez06rgt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 128,
+  "car_path": "dallarap217",
+  "name": "Dallara P217",
+  "class_label": "LMP2",
+  "research_class": "LMP2",
+  "logo": "Dallara",
+  "maker": "Dallara",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7800,
+   7800,
+   7850,
+   7900,
+   7900,
+   8400
+  ],
+  "story": "Dallara's first prototype since the original Audi R18 TDI; DPi version raced as the Cadillac in IMSA until 2023.",
+  "sources": [
+   "https://www.iracing.com/cars/dallara-p217-lmp2/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/dallarap217.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 213,
+  "car_path": "euronascar",
+  "name": "EURO NASCAR V8GP",
+  "class_label": "NASCAR",
+  "research_class": "NASCAR Euro",
+  "logo": null,
+  "maker": null,
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 5,
+  "shift_rpm_by_gear": [
+   6000,
+   6000,
+   6000,
+   6000,
+   6000
+  ],
+  "story": "First NASCAR car with a sequential gearbox (2021).",
+  "sources": [
+   "https://www.iracing.com/cars/euro-nascar/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/euronascar.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 144,
+  "car_path": null,
+  "name": "Ferrari 488 GT3 Evo 2020",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "2020 rework of the 488 GT3: longer wheelbase, new engine management, Sabelt seat.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-488-gt3-evo-2020/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'ferrarievogt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 94,
+  "car_path": null,
+  "name": "Ferrari 488 GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "One of Ferrari's most successful sports cars; IMSA, Blancpain and Pirelli World Challenge.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-488-gt3/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'ferrari488gt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 203,
+  "car_path": "ferrari296challenge",
+  "name": "Ferrari 296 Challenge",
+  "class_label": "CUP",
+  "research_class": "Cup (Ferrari Challenge)",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000
+  ],
+  "story": "Official Ferrari Challenge car since 2024 - the ninth car in the series' 30-year history.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-296-challenge/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/ferrari296challenge.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 173,
+  "car_path": "ferrari296gt3",
+  "name": "Ferrari 296 GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7360,
+   7440,
+   7420,
+   7360,
+   7350,
+   7900
+  ],
+  "story": "Succeeded the 488 GT3 EVO in 2023; designed for easier setup and much more downforce.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-296-gt3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/ferrari296gt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 93,
+  "car_path": "ferrari488gte",
+  "name": "Ferrari 488 GTE",
+  "class_label": "GTE",
+  "research_class": "GTE",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6550,
+   6550,
+   6550,
+   6550,
+   6550,
+   6550,
+   6550,
+   6550
+  ],
+  "story": "Won the 2016 WEC GT manufacturers' cup in its debut season.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-488-gte/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/ferrari488gte.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 196,
+  "car_path": "ferrari499p",
+  "name": "Ferrari 499P",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "Ferrari",
+  "maker": "Ferrari",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 7,
+  "shift_rpm_by_gear": [
+   6780,
+   7228,
+   7395,
+   7473,
+   7515,
+   7710,
+   7903
+  ],
+  "story": "Ended Ferrari's 50-year absence from factory top-class prototypes; car #50; won Le Mans on debut in 2023 and again in 2024.",
+  "sources": [
+   "https://www.iracing.com/cars/ferrari-499p/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/ferrari499p.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 40,
+  "car_path": null,
+  "name": "Ford GT GT2",
+  "class_label": "GT2",
+  "research_class": "GT2 / GT3 (legacy)",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "Robertson Racing's Ford GT-R took a popular GTE-Am podium at Le Mans 2011.",
+  "sources": [
+   "https://www.iracing.com/cars/ford-gt/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 59,
+  "car_path": null,
+  "name": "Ford GT GT3",
+  "class_label": "GT3",
+  "research_class": "GT2 / GT3 (legacy)",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "Robertson Racing's Ford GT-R took a popular GTE-Am podium at Le Mans 2011.",
+  "sources": [
+   "https://www.iracing.com/cars/ford-gt/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 30,
+  "car_path": null,
+  "name": "Ford Mustang FR500S",
+  "class_label": "MUSTANG",
+  "research_class": "Mustang Challenge",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": true,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "First race car built on a Ford production line and sold to the public.",
+  "sources": [
+   "https://www.iracing.com/cars/ford-mustang-fr500s/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 92,
+  "car_path": "fordgt2017",
+  "name": "Ford GTE",
+  "class_label": "GTE",
+  "research_class": "GTE",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6950,
+   6950,
+   6950,
+   6950,
+   6950,
+   6950,
+   6950,
+   6950
+  ],
+  "story": "Built to win Le Mans 50 years after 1966 - and did, in 2016.",
+  "sources": [
+   "https://www.iracing.com/cars/ford-gt-gte/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/fordgt2017.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 185,
+  "car_path": "fordmustanggt3",
+  "name": "Ford Mustang GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8250
+  ],
+  "story": "Multimatic-built; first Mustang at Le Mans since 1997.",
+  "sources": [
+   "https://www.iracing.com/cars/ford-mustang-gt3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/fordmustanggt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 204,
+  "car_path": "fordmustanggt4",
+  "name": "Ford Mustang GT4",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7300,
+   7300,
+   7300,
+   7300,
+   7300,
+   7300
+  ],
+  "story": "Swept both races on its IMSA debut at Daytona 2024 (KohR, Luca Mars).",
+  "sources": [
+   "https://www.iracing.com/cars/ford-mustang-gt4/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/fordmustanggt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 147,
+  "car_path": "hondacivictyper",
+  "name": "Honda Civic Type R TCR",
+  "class_label": "TCR",
+  "research_class": "TCR",
+  "logo": "Honda",
+  "maker": "Honda",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700,
+   6700
+  ],
+  "story": "Back-to-back TCR Model of the Year 2019 and 2020.",
+  "sources": [
+   "https://www.iracing.com/cars/honda-civic-type-r-tcr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/hondacivictyper.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 39,
+  "car_path": "hpdarx01c",
+  "name": "HPD ARX-01c",
+  "class_label": "LMP2",
+  "research_class": "LMP2",
+  "logo": "Honda",
+  "maker": "Honda",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": true,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   9850,
+   9950,
+   9500,
+   9600,
+   9450,
+   10000
+  ],
+  "story": "Won LMP2 at the 2010 Le Mans 24; roots in the Acura ARX-01 that won its class on debut at Sebring 2007.",
+  "sources": [
+   "https://www.iracing.com/cars/hpd-arx-01c/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/hpdarx01c.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 146,
+  "car_path": "hyundaielantracn7",
+  "name": "Hyundai Elantra N TCR",
+  "class_label": "TCR",
+  "research_class": "TCR",
+  "logo": "Hyundai",
+  "maker": "Hyundai",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500
+  ],
+  "story": "IMSA Michelin Pilot Challenge debut 2021 with Bryan Herta Autosport.",
+  "sources": [
+   "https://www.iracing.com/cars/hyundai-elantra-n-tcr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/hyundaielantracn7.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 153,
+  "car_path": "hyundaivelostern",
+  "name": "Hyundai Veloster N TCR",
+  "class_label": "TCR",
+  "research_class": "TCR",
+  "logo": "Hyundai",
+  "maker": "Hyundai",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500,
+   6500
+  ],
+  "story": "Went 1-2 in the 2019 IMSA Michelin Pilot Challenge standings (Bryan Herta Autosport).",
+  "sources": [
+   "https://www.iracing.com/cars/hyundai-veloster-n-tcr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/hyundaivelostern.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 44,
+  "car_path": null,
+  "name": "Kia Optima",
+  "class_label": "TOURING",
+  "research_class": "Touring",
+  "logo": "Kia",
+  "maker": "Kia",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "2014 Pirelli World Challenge GTS manufacturers' champion.",
+  "sources": [
+   "https://www.iracing.com/cars/kia-optima/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 133,
+  "car_path": "lamborghinievogt3",
+  "name": "Lamborghini Huracán GT3 EVO",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Lamborghini",
+  "maker": "Lamborghini",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000,
+   8000
+  ],
+  "story": "Swept the 2020 IMSA titles with Paul Miller Racing; Dallara-developed aero.",
+  "sources": [
+   "https://www.iracing.com/cars/lamborghini-huracan-gt3-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/lamborghinievogt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 165,
+  "car_path": "ligierjsp320",
+  "name": "Ligier JS P320",
+  "class_label": "LMP3",
+  "research_class": "LMP3",
+  "logo": "Ligier",
+  "maker": "Ligier",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": true,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6680,
+   6700,
+   6810,
+   6850,
+   6920,
+   6670
+  ],
+  "story": "2019 successor to the JS P3; dominated IMSA's LMP3 class 2021-22; now races in the IMSA VP Racing SportsCar Challenge with GT4s.",
+  "sources": [
+   "https://www.iracing.com/cars/ligier-js-p320/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/ligierjsp320.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 34,
+  "car_path": null,
+  "name": "Mazda MX-5 Cup - 2010",
+  "class_label": "MX-5",
+  "research_class": "MX-5 (2010)",
+  "logo": "Mazda",
+  "maker": "Mazda",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Backbone of SCCA Pro Racing's MX-5 Cup.",
+  "sources": [
+   "https://www.iracing.com/cars/mazda-mx-5-cup-2010/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 35,
+  "car_path": null,
+  "name": "Mazda MX-5 Roadster - 2010",
+  "class_label": "MX-5",
+  "research_class": "MX-5 (2010)",
+  "logo": "Mazda",
+  "maker": "Mazda",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Roadster edition with right-hand drive.",
+  "sources": [
+   "https://www.iracing.com/cars/mazda-mx-5-roadster-2010/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 135,
+  "car_path": "mclaren570sgt4",
+  "name": "McLaren 570S GT4",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "Mclaren",
+  "maker": "Mclaren",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6850,
+   6850,
+   6950,
+   7350,
+   7350,
+   7400
+  ],
+  "story": "Broke cover at Goodwood 2016; 140 podiums worldwide in 2019.",
+  "sources": [
+   "https://www.iracing.com/cars/mclaren-570s-gt4/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mclaren570sgt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 188,
+  "car_path": "mclaren720sgt3",
+  "name": "McLaren 720S GT3 EVO",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Mclaren",
+  "maker": "Mclaren",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7243,
+   7053,
+   6963,
+   6890,
+   6858,
+   8000
+  ],
+  "story": "720S GT3 since 2019, EVO in 2023; Pfaff brought it to IMSA GTD Pro in 2024.",
+  "sources": [
+   "https://www.iracing.com/cars/mclaren-720s-gt3-evo/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mclaren720sgt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "CarPath: Lovely lists 'mclaren720sgt3' as 'McLaren 720S GT3'; that the EVO kept the same folder is not confirmed.",
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 43,
+  "car_path": "mclarenmp4",
+  "name": "McLaren MP4-12C GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Mclaren",
+  "maker": "Mclaren",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7100,
+   7100,
+   7100,
+   7100,
+   7100,
+   7100
+  ],
+  "story": "19 wins across Europe in its 2012 debut season.",
+  "sources": [
+   "https://www.iracing.com/cars/mclaren-mp4-12c-gt3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mclarenmp4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 72,
+  "car_path": null,
+  "name": "Mercedes-AMG GT3",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Mercedes",
+  "maker": "Mercedes",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": true,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "SLS AMG GT3 lineage, 180+ international wins.",
+  "sources": [
+   "https://www.iracing.com/cars/mercedes-amg-gt3/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "CarPath: not in Lovely Car Data; candidate 'mercedesamggt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 156,
+  "car_path": "mercedesamgevogt3",
+  "name": "Mercedes-AMG GT3 2020",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Mercedes",
+  "maker": "Mercedes",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7100,
+   7000,
+   7030,
+   7070,
+   7100,
+   7600
+  ],
+  "story": "Took five of the top six (top four) at its first Nürburgring 24 in 2015; 2020 aero update.",
+  "sources": [
+   "https://www.iracing.com/cars/mercedes-amg-gt3-2020/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mercedesamgevogt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 157,
+  "car_path": "mercedesamggt4",
+  "name": "Mercedes-AMG GT4",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "Mercedes",
+  "maker": "Mercedes",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6300,
+   6400,
+   6590,
+   6680,
+   6720,
+   6650
+  ],
+  "story": "Won the Nürburgring 24 SP10 class on its first two tries.",
+  "sources": [
+   "https://www.iracing.com/cars/mercedes-amg-gt4/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mercedesamggt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 67,
+  "car_path": "mx5 mx52016",
+  "name": "Global Mazda MX-5 Cup",
+  "class_label": "MX-5",
+  "research_class": "MX-5 Cup",
+  "logo": "Mazda",
+  "maker": "Mazda",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   7400,
+   7400,
+   7400,
+   7400,
+   7400,
+   7400,
+   7400,
+   7400
+  ],
+  "story": "iRacing helped design and develop the car; the world's most raced production car.",
+  "sources": [
+   "https://www.iracing.com/cars/global-mazda-mx-5-cup/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/mx5-mx52016.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 77,
+  "car_path": null,
+  "name": "Nissan GTP ZX-T",
+  "class_label": "CLASSIC",
+  "research_class": "IMSA GTP (1980s)",
+  "logo": "Nissan",
+  "maker": "Nissan",
+  "hybrid": false,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Electramotive's 'Porsche and Jaguar slayer': Geoff Brabham IMSA Camel GT titles in 1988 and 1989.",
+  "sources": [
+   "https://www.iracing.com/cars/nissan-gtp-zx-t/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'nissangtpzxt' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 10,
+  "car_path": null,
+  "name": "Pontiac Solstice - Rookie",
+  "class_label": "SOLSTICE",
+  "research_class": "Solstice",
+  "logo": "Pontiac",
+  "maker": "Pontiac",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "More approachable Rookie version.",
+  "sources": [
+   "https://www.iracing.com/cars/pontiac-solstice-club-sport-rookie/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 3,
+  "car_path": null,
+  "name": "Pontiac Solstice",
+  "class_label": "SOLSTICE",
+  "research_class": "Solstice",
+  "logo": "Pontiac",
+  "maker": "Pontiac",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Back-to-back SCCA Showroom Stock B national titles.",
+  "sources": [
+   "https://www.iracing.com/cars/pontiac-solstice-club-sport/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 137,
+  "car_path": null,
+  "name": "Porsche 911 GT3 R",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Won first time out at the Bathurst 12 Hour.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-911-gt3-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data; candidate 'porsche911rgt3' is from memory, NOT verified - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 88,
+  "car_path": null,
+  "name": "Porsche 911 GT3 Cup (991)",
+  "class_label": "CUP",
+  "research_class": "Cup (Porsche)",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "The world's most produced GT race car; car of the Porsche Esports Supercup.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-gt3-cup/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 158,
+  "car_path": null,
+  "name": "Porsche Mission R",
+  "class_label": "EV",
+  "research_class": "Electric GT",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": true,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Porsche's first all-electric GT race car and the first EV on iRacing.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-mission-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 119,
+  "car_path": "porsche718gt4",
+  "name": "Porsche 718 Cayman GT4 Clubsport MR",
+  "class_label": "GT4",
+  "research_class": "GT4",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   7500,
+   7500,
+   7500,
+   7500,
+   7500,
+   7500,
+   7500,
+   7500
+  ],
+  "story": "Races in IMSA Michelin Pilot Challenge on iRacing.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-718-cayman/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche718gt4.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 100,
+  "car_path": "porsche919",
+  "name": "Porsche 919",
+  "class_label": "LMP1",
+  "research_class": "LMP1",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   8850,
+   8850,
+   8850,
+   8850,
+   8850,
+   8850,
+   8850,
+   8850
+  ],
+  "story": "Won Le Mans and the WEC title in 2015, 2016 and 2017; 17 WEC wins.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-919-lmp1/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche919.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 174,
+  "car_path": "porsche963gtp",
+  "name": "Porsche 963 GTP",
+  "class_label": "GTP",
+  "research_class": "GTP",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": true,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   8010,
+   8010,
+   8010,
+   8010,
+   8010,
+   8010,
+   8010,
+   8010
+  ],
+  "story": "Porsche's return to top-level prototypes in 2023 after a five-year break; Multimatic chassis; first win at Long Beach (Jaminet/Tandy).",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-963-gtp/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche963gtp.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 102,
+  "car_path": "porsche991rsr",
+  "name": "Porsche 911 RSR",
+  "class_label": "GTE",
+  "research_class": "GTE",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   9000,
+   9000,
+   9000,
+   9000,
+   9000,
+   9000
+  ],
+  "story": "The first mid-engine 911.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-911-rsr/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche991rsr.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 208,
+  "car_path": "porsche9922cup",
+  "name": "Porsche 911 Cup (992.2)",
+  "class_label": "CUP",
+  "research_class": "Cup (Porsche)",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7900,
+   8200,
+   8400,
+   8500,
+   8600,
+   9000
+  ],
+  "story": "New for 2026 in Supercup and Carrera Cup; more adjustments in the car.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-911-cup-992-2/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche9922cup.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 143,
+  "car_path": "porsche992cup",
+  "name": "Porsche 911 GT3 Cup (992.1)",
+  "class_label": "CUP",
+  "research_class": "Cup (Porsche)",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7900,
+   8200,
+   8400,
+   8500,
+   8600,
+   9000
+  ],
+  "story": "New for the 2021 Supercup season; first that can run on synthetic fuel.",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-911-gt3-cup-992/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche992cup.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 169,
+  "car_path": "porsche992rgt3",
+  "name": "Porsche 911 GT3 R (992)",
+  "class_label": "GT3",
+  "research_class": "GT3",
+  "logo": "Porsche",
+  "maker": "Porsche",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   8834,
+   8823,
+   8815,
+   8785,
+   8777,
+   9200
+  ],
+  "story": "First IMSA win at the 2023 Sebring 12 Hours (Pfaff GTD Pro: Bachler/Pilet/Vanthoor).",
+  "sources": [
+   "https://www.iracing.com/cars/porsche-911-gt3-r-992/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/porsche992rgt3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 13,
+  "car_path": "radical sr8",
+  "name": "Radical SR8",
+  "class_label": "RADICAL",
+  "research_class": "Prototype (Radical)",
+  "logo": "Radical",
+  "maker": "Radical",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   10390,
+   10390,
+   10390,
+   10390,
+   10390,
+   10390
+  ],
+  "story": "Set the overall Nordschleife lap record in 2005 and held it for 12 years.",
+  "sources": [
+   "https://www.iracing.com/cars/radical-sr8-v8/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/radical-sr8.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 149,
+  "car_path": "radicalsr10",
+  "name": "Radical SR10",
+  "class_label": "RADICAL",
+  "research_class": "Prototype (Radical)",
+  "logo": "Radical",
+  "maker": "Radical",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7000,
+   7000,
+   7000,
+   7000,
+   7000,
+   7000
+  ],
+  "story": "Launched mid-2020 as the head of Radical's SR range; near-LMP2 performance.",
+  "sources": [
+   "https://www.iracing.com/cars/radical-sr10/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/radicalsr10.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 162,
+  "car_path": "renaultcliocup",
+  "name": "Renault Clio",
+  "class_label": "CUP",
+  "research_class": "Cup (Clio)",
+  "logo": "Renault",
+  "maker": "Renault",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6400,
+   6400,
+   6400,
+   6400,
+   6400,
+   6400,
+   6400,
+   6400
+  ],
+  "story": "Fifth-gen Clio Cup (2020); past Renault one-make champions include Carlos Sainz and Jan Lammers.",
+  "sources": [
+   "https://www.iracing.com/cars/renault-clio-rs-v/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/renaultcliocup.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 21,
+  "car_path": null,
+  "name": "Riley MkXX Daytona Prototype - 2008",
+  "class_label": "DP",
+  "research_class": "DP",
+  "logo": null,
+  "maker": "Riley",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 5,
+  "shift_rpm_by_gear": [],
+  "story": "Riley Mk XX: among the most successful Daytona Prototypes.",
+  "sources": [
+   "https://www.iracing.com/cars/riley-mkxx-daytona-prototype/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 48,
+  "car_path": null,
+  "name": "Ruf RT 12R AWD",
+  "class_label": "RUF",
+  "research_class": "Ruf",
+  "logo": null,
+  "maker": "Ruf",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "RUF: recognised by the German government as a manufacturer in its own right.",
+  "sources": [
+   "https://www.iracing.com/cars/ruf-rt-12-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 52,
+  "car_path": null,
+  "name": "Ruf RT 12R C-Spec",
+  "class_label": "RUF",
+  "research_class": "Ruf",
+  "logo": null,
+  "maker": "Ruf",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "RUF: recognised by the German government as a manufacturer in its own right.",
+  "sources": [
+   "https://www.iracing.com/cars/ruf-rt-12-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 49,
+  "car_path": null,
+  "name": "Ruf RT 12R RWD",
+  "class_label": "RUF",
+  "research_class": "Ruf",
+  "logo": null,
+  "maker": "Ruf",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "RUF: recognised by the German government as a manufacturer in its own right.",
+  "sources": [
+   "https://www.iracing.com/cars/ruf-rt-12-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 50,
+  "car_path": null,
+  "name": "Ruf RT 12R Track",
+  "class_label": "RUF",
+  "research_class": "Ruf",
+  "logo": null,
+  "maker": "Ruf",
+  "hybrid": null,
+  "electric": false,
+  "abs": true,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "RUF: recognised by the German government as a manufacturer in its own right.",
+  "sources": [
+   "https://www.iracing.com/cars/ruf-rt-12-r/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 23,
+  "car_path": "specracer",
+  "name": "SCCA Spec Racer Ford",
+  "class_label": "SRF",
+  "research_class": "SRF",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650,
+   6650
+  ],
+  "story": "The original one-design class (Sports Renault 1984); Gen3 on iRacing since 2021 S3.",
+  "sources": [
+   "https://www.iracing.com/cars/scca-spec-racer/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/specracer.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 151,
+  "car_path": null,
+  "name": "Stock Car Brasil Chevrolet Cruze",
+  "class_label": "SCB",
+  "research_class": "Stock Car Brasil",
+  "logo": "Chevrolet",
+  "maker": "Chevrolet",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Chevrolet has run in Stock Car Brasil since 1979; Daniel Serra's three straight titles.",
+  "sources": [
+   "https://www.iracing.com/cars/stockcar-brasil-chevrolet-cruze/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 152,
+  "car_path": null,
+  "name": "Stock Car Brasil Toyota Corolla",
+  "class_label": "SCB",
+  "research_class": "Stock Car Brasil",
+  "logo": "Toyota",
+  "maker": "Toyota",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Won the first five races of its 2020 debut season.",
+  "sources": [
+   "https://www.iracing.com/cars/stockcar-brasil-toyota-corolla/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 192,
+  "car_path": "supercars chevycamarogen3",
+  "name": "Supercars Chevrolet Camaro Gen 3",
+  "class_label": "SUPERCAR",
+  "research_class": "Supercars",
+  "logo": "Chevrolet",
+  "maker": "Chevrolet",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6880,
+   7010,
+   7140,
+   7240,
+   7320,
+   7400
+  ],
+  "story": "Started a 15-race winning streak in 2023 on the way to Chevrolet's first Supercars manufacturers' title.",
+  "sources": [
+   "https://www.iracing.com/cars/supercars-chevrolet-camaro-gen3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/supercars-chevycamarogen3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 118,
+  "car_path": null,
+  "name": "Supercars Ford Mustang GT",
+  "class_label": "SUPERCAR",
+  "research_class": "Supercars (Gen2)",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Scott McLaughlin's back-to-back titles with DJR Team Penske.",
+  "sources": [
+   "https://www.iracing.com/cars/supercars-ford-mustang-gt/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 190,
+  "car_path": "supercars fordmustanggen3",
+  "name": "Supercars Ford Mustang Gen 3",
+  "class_label": "SUPERCAR",
+  "research_class": "Supercars",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   6880,
+   7010,
+   7140,
+   7240,
+   7320,
+   7400
+  ],
+  "story": "Won the first race of the Gen 3 era (Newcastle 2023, Cameron Waters).",
+  "sources": [
+   "https://www.iracing.com/cars/supercars-ford-mustang-gen3/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/supercars-fordmustanggen3.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 117,
+  "car_path": null,
+  "name": "Supercars Holden ZB Commodore",
+  "class_label": "SUPERCAR",
+  "research_class": "Supercars (Gen2)",
+  "logo": "Holden",
+  "maker": "Holden",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Won first time out with Shane van Gisbergen (2018).",
+  "sources": [
+   "https://www.iracing.com/cars/supercars-holden-zb-commodore/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 160,
+  "car_path": "toyotagr86",
+  "name": "Toyota GR86",
+  "class_label": "GR86",
+  "research_class": "GR86 Cup",
+  "logo": "Toyota",
+  "maker": "Toyota",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [
+   7250,
+   7250,
+   7250,
+   7250,
+   7250,
+   7250
+  ],
+  "story": "Official car of the Toyota GR Cup.",
+  "sources": [
+   "https://www.iracing.com/cars/toyota-gr86/ (fetched 2026-10-28)",
+   "Lovely Car Data data/iracing/toyotagr86.json @ 08db79e"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 28,
+  "car_path": null,
+  "name": "V8 Supercar Ford Falcon - 2009",
+  "class_label": "SUPERCAR",
+  "research_class": "V8 Supercars (legacy)",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "One of the twin staples of V8 Supercars with the Commodore.",
+  "sources": [
+   "https://www.iracing.com/cars/v8-supercar-ford-falcon-2009/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 61,
+  "car_path": null,
+  "name": "V8 Supercar Ford FG Falcon - 2014",
+  "class_label": "SUPERCAR",
+  "research_class": "V8 Supercars (legacy)",
+  "logo": "Ford",
+  "maker": "Ford",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "Car of Penske's V8 Supercars foray.",
+  "sources": [
+   "https://www.iracing.com/cars/v8-supercar-ford-fg-falcon-2014/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ },
+ {
+  "car_id": 60,
+  "car_path": null,
+  "name": "V8 Supercar Holden VF Commodore - 2014",
+  "class_label": "SUPERCAR",
+  "research_class": "V8 Supercars (legacy)",
+  "logo": "Holden",
+  "maker": "Holden",
+  "hybrid": null,
+  "electric": false,
+  "abs": null,
+  "tc": null,
+  "gears": 0,
+  "shift_rpm_by_gear": [],
+  "story": "Same Zeta platform as NASCAR's Gen6 Chevy SS.",
+  "sources": [
+   "https://www.iracing.com/cars/v8-supercar-holden-vf-commodore-2014/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "ABS: not stated by iRacing's car page - confirm from the car's iRacing user manual or live (dcABS).",
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does).",
+   "Gearbox: not on the iRacing page."
+  ]
+ },
+ {
+  "car_id": 27,
+  "car_path": null,
+  "name": "VW Jetta TDI Cup",
+  "class_label": "CUP",
+  "research_class": "Jetta TDI Cup",
+  "logo": "Volkswagen",
+  "maker": "Volkswagen",
+  "hybrid": null,
+  "electric": false,
+  "abs": true,
+  "tc": null,
+  "gears": 6,
+  "shift_rpm_by_gear": [],
+  "story": "SCCA Pro Racing Jetta TDI Cup 2008-2011.",
+  "sources": [
+   "https://www.iracing.com/cars/volkswagen-jetta-tdi/ (fetched 2026-10-28)"
+  ],
+  "unverified": [
+   "TC: not stated by iRacing's car page - confirm from the manual or live (dcTractionControl).",
+   "CarPath: not in Lovely Car Data - read DriverInfo.CarPath from a live session.",
+   "Fuel tank: iRacing's car page publishes none - read DriverCarFuelMaxLtr x DriverCarMaxFuelPct live (strat_live.tank already does)."
+  ]
+ }
+]

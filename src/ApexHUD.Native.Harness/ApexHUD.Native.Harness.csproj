@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApexHUD.Native.Common\ApexHUD.Native.Common.csproj" />
+    <ProjectReference Include="..\ApexHUD.Native.Data\ApexHUD.Native.Data.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>apexhud-diag</AssemblyName>
+  </PropertyGroup>
+
+</Project>

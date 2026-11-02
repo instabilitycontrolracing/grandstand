@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support the project (Ko-fi)
+    url: https://ko-fi.com/instabilitycontrol
+    about: Donations keep it free. They unlock nothing.
+  - name: Support the project (PayPal)
+    url: https://www.paypal.com/donate/?hosted_button_id=WMCFSMXNS8XYG
+    about: Same thing, through PayPal.

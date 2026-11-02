@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 2026-10-29 (efficiency pass): steady race-frame bench - the graphics that are on screen for most of a race
+       (tower, session bar + watch, ticker, battle card, radio card) drawn the way the compositor draws them, on a
+       3840x2160 raster surface scaled 2x. Reports CPU ms and managed bytes allocated per frame. Runs against the BUILT
+       app assemblies (GsBin, default the GpuHost Release output). Not part of the app build. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GsBin Condition="'$(GsBin)' == ''">$(MSBuildThisFileDirectory)../../src/ApexHUD.Native.GpuHost/bin/Release/net8.0-windows</GsBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ApexHUD.Native.Overlays"><HintPath>$(GsBin)/ApexHUD.Native.Overlays.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Common"><HintPath>$(GsBin)/ApexHUD.Native.Common.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Data"><HintPath>$(GsBin)/ApexHUD.Native.Data.dll</HintPath></Reference>
+    <Compile Include="../stinger_bench/Egl.cs" />   <!-- the gpu option: headless OpenGL -->
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "championship-gold",
+    "name": "Championship gold",
+    "accent": "#FFD876",
+    "secondary": "#F3E2B3",
+    "glow": "#B8964C",
+    "glowStrength": 0.45,
+    "glass": "#0A0806",
+    "glassOpacity": 0.5,
+    "texture": "brushed",
+    "textureStrength": 0.6,
+    "motif": "chequered",
+    "particles": true,
+    "particleStyle": "glints",
+    "density": 0.3,
+    "sweep": true,
+    "appliesTo": ["tower", "bar", "driver", "story", "battle", "splash", "ticker", "popups", "viewer"]
+  }
+]

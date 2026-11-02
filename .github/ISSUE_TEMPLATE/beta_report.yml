@@ -1,0 +1,74 @@
+name: Report a problem
+description: Something went wrong, sounded wrong, or said the wrong thing. Tell us and we'll look at it.
+title: "[Beta] "
+labels: ["beta report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. Reports are read in batches, so you may not hear back straight away. Everyone's report gets read.
+        **Please don't post personal info** (real name, email, iRacing password, anything private).
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options:
+        - Track opener (globe / track draw)
+        - Starting grid / info cards
+        - Timing tower
+        - Battle box / gaps
+        - Story cards
+        - Chequered flag / podium / results
+        - Replay cameras
+        - Install / starting the app
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: When did it happen?
+      options:
+        - Practice
+        - Qualifying
+        - Race
+        - Formation lap
+        - In the pits
+        - Not in a session
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Plain words are perfect. A screenshot is worth a thousand words.
+      placeholder: "The tower showed me P4 after I passed for P3."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+  - type: input
+    id: cartrack
+    attributes:
+      label: Car and track
+      placeholder: "BMW M Hybrid V8 at Le Mans"
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in the tray menu.
+      placeholder: "0.1.0"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots (optional, really helps)
+      description: Drag the log file from the app folder into this box, and any screenshots.
+  - type: checkboxes
+    id: ok
+    attributes:
+      label: One more thing
+      options:
+        - label: I didn't put any personal info in this report.
+          required: true

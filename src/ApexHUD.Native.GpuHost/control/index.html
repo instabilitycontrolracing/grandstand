@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grandstand Control</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="bar">
+    <div class="brand">
+      <span class="word">GRANDSTAND</span>
+      <span class="rule" aria-hidden="true"></span>
+      <span class="sub">Control</span>
+    </div>
+    <div class="status" id="status" aria-live="polite">
+      <span class="dot"></span><span class="state">Connecting…</span><span class="where"></span>
+    </div>
+    <div class="right">
+      <div class="modes" role="group" aria-label="Mode" id="modes">
+        <button type="button" data-mode="lean"><b>Lean</b><small>daily streams</small></button>
+        <button type="button" data-mode="broadcast"><b>Broadcast</b><small>full show</small></button>
+        <button type="button" data-mode="studio"><b>Studio</b><small>editors open</small></button>
+        <span class="slider" aria-hidden="true"></span>
+      </div>
+      <button type="button" class="onair" id="onair" aria-pressed="true"><span class="ring" aria-hidden="true"></span><b>ON AIR</b></button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Screens" id="rail">
+    <a href="#onair" data-screen="onair">On Air</a>
+    <a href="#show" data-screen="show">Show</a>
+    <a href="#event" data-screen="event">Event &amp; sponsors</a>
+    <a href="#test" data-screen="test">Test cards</a>
+    <a href="#settings" data-screen="settings">Settings</a>
+    <div class="studio-group" id="studioGroup">
+      <div class="label">Studio</div>
+      <a href="#studio" data-screen="studio">Preview &amp; Program</a>
+      <a href="#timing" data-screen="timing">Transitions &amp; timing</a>
+      <a href="#data" data-screen="data">iRacing data</a>
+      <a href="#builder" data-screen="builder">Card builder</a>
+    </div>
+    <div class="foot">Free forever · <span id="ver">beta</span></div>
+  </nav>
+
+  <main class="stage" id="stage">
+    <div class="wipe" id="wipe" aria-hidden="true"></div>
+    <div class="screen" id="screen"></div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+name: Idea
+description: Something you'd like it to do.
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would make it better?
+      description: What would you want to see on the broadcast, and when?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it look good / help viewers?

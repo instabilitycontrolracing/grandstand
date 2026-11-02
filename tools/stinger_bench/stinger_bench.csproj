@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Class-transition bench (2026-10-30, "class transitions choppy, ~42 ms a frame"): plays the built-in roller
+       (ProceduralStinger) through the splash wipe at 4K, frame by frame, and reports CPU ms per frame + managed
+       bytes; dumps frames so a before and an after build can be compared pixel by pixel.
+       StingerSrc = the ProceduralStinger.cs to compile (default: the repo's) - point it at an old copy for "before". -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS0162;CS0414;CS0169;CS8618</NoWarn>
+    <StingerSrc Condition="'$(StingerSrc)' == ''">../../src/ApexHUD.Native.Overlays/ProceduralStinger.cs</StingerSrc>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(StingerSrc)" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/OverlayLog.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/Assets.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Overlays/Fonts.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/ClassColors.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/ClassLogo.cs" />
+    <Compile Include="../../src/ApexHUD.Native.Common/BroadcastPalette.cs" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>

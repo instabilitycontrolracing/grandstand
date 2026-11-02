@@ -1,0 +1,6 @@
+[
+  { "id": "heavy", "name": "Heavy (bench)", "accent": "#FFD876", "secondary": "#FFFFFF", "glow": "#FF5E00", "glowStrength": 1,
+    "glass": "#100808", "glassOpacity": 0.9, "texture": "stars", "textureStrength": 1, "motif": "chequered",
+    "particles": true, "particleStyle": "twinkle", "density": 1, "sweep": true,
+    "appliesTo": ["tower", "bar", "driver", "story", "battle", "splash", "ticker", "popups", "viewer"] }
+]

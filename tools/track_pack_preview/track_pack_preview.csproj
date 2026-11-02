@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Per-track broadcast content preview (2026-10-28): corner labels + heritage, the track card (story, lap walk). -->
+  
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    
+    <GsBin Condition="'$(GsBin)' == ''">$(MSBuildThisFileDirectory)../../src/ApexHUD.Native.Overlays/bin/Release/net8.0-windows</GsBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="ApexHUD.Native.Overlays"><HintPath>$(GsBin)/ApexHUD.Native.Overlays.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Common"><HintPath>$(GsBin)/ApexHUD.Native.Common.dll</HintPath></Reference>
+    <Reference Include="ApexHUD.Native.Data"><HintPath>$(GsBin)/ApexHUD.Native.Data.dll</HintPath></Reference>
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.8" />
+  </ItemGroup>
+</Project>
+
