@@ -1,11 +1,11 @@
-using ApexHUD.Native.Common;
+﻿using ApexHUD.Native.Common;
 
 namespace ApexHUD.Native.Overlays;
 
 /// <summary>
 /// Single coordinator for which overlay windows are visible right now and how the
 /// session bar is sized. Every window pulls from these properties each frame so
-/// the suite switches together and consistently — there is no second source of
+/// the suite switches together and consistently â€” there is no second source of
 /// truth. The state is derived from three signals: the race phase from the
 /// snapshot, a process-wide <c>lap1Complete</c> latch (true once the overall
 /// race leader has crossed the start-finish line on lap 1; resets on a
@@ -60,7 +60,7 @@ public static class PresentationState
     // Battle mode takes precedence over the racing layout: when battle is
     // active during the broadcast phase the tower + featured are hidden and the
     // ticker + battle card take over. Before the leader has finished lap 1 the
-    // tower + featured stay hidden too — the field is bunched, battle
+    // tower + featured stay hidden too â€” the field is bunched, battle
     // conditions are essentially always true, and showing 30 cars within 1 s of
     // each other reads as noise rather than information.
 
@@ -130,7 +130,33 @@ public static class PresentationState
     /// <summary>2026-10-27 (#423, Angelo: "when the replays happen make there be no overlay, then it comes back smoothly"):
     /// 0 = graphics on, 1 = hidden for a replay (eased by the host; the replay wipe and its REPLAY tag stay).</summary>
     public static float ReplayHideK { get; set; }
-    public static bool FeaturedVisible   => IsRacing && (Lap1Complete || !IsRaceSession) && !IsBattleActive && !BumperBattleStyle && !StoryDirector.Visible;
+    public static bool FeaturedVisible   => FeaturedFree && Environment.TickCount64 < featOpenUntil;
+    static bool FeaturedFree => IsRacing && (Lap1Complete || !IsRaceSession) && !IsBattleActive && !BumperBattleStyle && !StoryDirector.Visible && !PitStopShowing;
+    /// <summary>#716: our pit stop board is up (bottom centre) - the driver card stays away meanwhile.</summary>
+    public static bool PitStopShowing;
+
+    // #704 (2026-10-31, Angelo: "the driver card on the bottom middle of the overlay does not need to be there all the time
+    // maybe it comes up on the screen every once in a while like every ten or fifteen minutes or every two laps"):
+    // the card comes up for 20 s - once the race is under way, then every 2 laps (at least 5 min apart) or after 12 min,
+    // whichever comes first. If a battle / story card is on screen when it's due, it waits until the screen is free.
+    const long FeatShowMs = 9_000 /* #726: broadcast research - time on screen sized to its words (~0.35 s a word + 1.5 s), was 20 s */, FeatMinGapMs = 5 * 60_000, FeatMaxGapMs = 12 * 60_000;
+    static long featOpenUntil, featLastShow = long.MinValue / 2;
+    static int featLastLap = -1;
+    static bool featPending;
+
+    static void TickFeatured(RaceSnapshot snap)
+    {
+        long now = Environment.TickCount64;
+        if (snap.Phase == RacePhase.PreRace) { featOpenUntil = 0; featLastShow = long.MinValue / 2; featLastLap = -1; featPending = false; return; }
+        int lap = snap.Player?.LapsCompleted ?? -1;
+        if (lap >= 0 && (featLastLap < 0 || lap < featLastLap)) featLastLap = Math.Max(0, lap - 2);   // first time / new session: due now
+        bool due = (lap >= featLastLap + 2 && now - featLastShow > FeatMinGapMs) || now - featLastShow > FeatMaxGapMs;
+        if (due && now >= featOpenUntil) featPending = true;
+        if (featPending && FeaturedFree && now >= featOpenUntil)
+        {
+            featOpenUntil = now + FeatShowMs; featLastShow = now; featLastLap = Math.Max(lap, 0); featPending = false;
+        }
+    }
 
     /// <summary>2026-10-18 (Angelo): event notifications (pit callouts, pit /
     /// fastest-lap row wings, fastest-lap callout) only fire once this is true.
@@ -157,5 +183,6 @@ public static class PresentationState
             lap1Complete = false;
         else if (!lap1Complete && snap.Leader is { LapsCompleted: >= 1 })
             lap1Complete = true;
+        try { TickFeatured(snap); } catch { }
     }
 }

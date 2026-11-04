@@ -95,3 +95,4 @@ CLAUDE_CODE_HANDOFF.md
 NEW_CHAT_HANDOFF.md
 JOURNAL.md
 src/stderr.log
+*.before_*

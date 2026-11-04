@@ -21,7 +21,13 @@ public sealed class BattleMap
     string? key; bool tried;
     SKPoint[]? raw; float[]? cum;
     readonly SKPath path = new();          // the circuit in map coordinates (drawn through the zoom matrix)
+    // #742 (2026-11-01, "leaner, same quality"): the map only ever shows a few hundred metres of the circuit, but the whole
+    // circuit (thousands of points at Le Mans) was stroked three times a frame, two of them through a blur. Now only the
+    // stretch near the view is stroked: same picture (everything else was clipped away anyway), a fraction of the work.
+    readonly SKPath vpath = new();
+    SKRect vpathFor = SKRect.Empty;
     float alpha;
+    public float Alpha => alpha;
     double lastMs = -1;
     // the zoom: centre (map coordinates) and scale, eased
     SKPoint vc; float vs = -1;
@@ -111,10 +117,13 @@ public sealed class BattleMap
     readonly SKPaint text = new() { IsAntialias = true, TextAlign = SKTextAlign.Center };
 
     /// <summary>Draw at the panel's top-left. <paramref name="cars"/> = the battling cars (player first if involved).</summary>
-    public void Draw(SKCanvas c, float x, float y, RaceSnapshot snap, IReadOnlyList<int> cars, bool show, double nowMs)
+    /// 2026-10-31 (Angelo: "the mini map ... on the main screen too in the top right when I am in regular mode ... yellow flag
+    /// logic and everything"): <paramref name="cruise"/> = the regular-mode map - our car (+ class cars close by), the place we're
+    /// heading into. Both modes frame a yellow flag ahead (up to 2.5 km), mark it flashing and say YELLOW FLAG in the header.
+    public void Draw(SKCanvas c, float x, float y, RaceSnapshot snap, IReadOnlyList<int> cars, bool show, double nowMs, bool cruise = false)
     {
         double dt = lastMs < 0 ? 16 : Math.Clamp(nowMs - lastMs, 0, 100); lastMs = nowMs;
-        alpha = Math.Clamp(alpha + (float)(dt / 280.0) * (show && cars.Count >= 2 ? 1 : -1), 0f, 1f);
+        alpha = Math.Clamp(alpha + (float)(dt / 280.0) * (show && cars.Count >= (cruise ? 1 : 2) ? 1 : -1), 0f, 1f);
         if (alpha <= 0.01f) { vs = -1; return; }
         var k = TrackMapCache.Resolve(snap.TrackConfigName, snap.TrackDisplayName, snap.TrackBroadcastName, snap.TrackRawName);
         if (k != key || !tried) { key = k; tried = true; Load(k); vs = -1; }
@@ -133,10 +142,17 @@ public sealed class BattleMap
         double lenM = TrackCorners.LengthM(snap.Extras.TrackLength); if (lenM <= 0) lenM = 5000;
         float M(double metres) => (float)(metres / lenM);
         var corner = TrackCorners.Upcoming(snap.TrackRawName, snap.Extras.TrackLength, frontPct, 700);
+        // yellow flag ahead (YellowFlagCallout works out where): frame it, flash it
+        bool ylw = YellowFlagCallout.YellowNow && YellowFlagCallout.CurrentPct >= 0;
+        float yRel = ylw ? DistAhead(YellowFlagCallout.CurrentPct, frontPct) : 1f;
+        if (ylw && yRel > 0.5f && 1f - yRel < M(150)) yRel = 0f;            // just behind the front car: it's here
+        bool ylwAhead = ylw && yRel < M(2500);
+        float yFlash = 0.5f + 0.5f * (float)Math.Sin(nowMs / 1000.0 * 2 * Math.PI * 1.6);
 
         // ---- the window: 120 m behind the last car to the end of the corner coming up (at least 350 m ahead)
         float w0 = refPct + back - M(120);
         float w1 = refPct + front + M(350);
+        if (ylwAhead) w1 = Math.Max(w1, frontPct + yRel + M(150));
         if (corner is { } cn) { float ce = cn.EndPct; float rel = ce - frontPct; if (rel < -0.5f) rel += 1; if (rel > 0 && rel < M(1200)) w1 = Math.Max(w1, frontPct + rel + M(60)); }
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         for (int s2 = 0; s2 <= 40; s2++)
@@ -156,6 +172,13 @@ public sealed class BattleMap
         if (straight != null) { eye = "FIGHTING DOWN"; place = straight.ToUpperInvariant(); }
         else if (corner is { } h) { eye = h.Inside ? "FIGHTING THROUGH" : "FIGHTING INTO"; place = h.Name.ToUpperInvariant(); }
         else { eye = "ON TRACK"; place = ""; }
+        if (cruise) eye = eye.Replace("FIGHTING DOWN", "DOWN").Replace("FIGHTING THROUGH", "THROUGH").Replace("FIGHTING INTO", "HEADING INTO");
+        if (ylwAhead)
+        {
+            eye = "YELLOW FLAG";
+            var yp = YellowFlagCallout.CurrentPlace;
+            if (!string.IsNullOrWhiteSpace(yp)) place = yp.ToUpperInvariant();
+        }
         var panel = new SKRect(x, y + (1 - a) * 18f, x + W, y + H + (1 - a) * 18f);
         using var rr = new SKRoundRect(panel, 14, 14);
         fill.Shader = null;
@@ -176,7 +199,7 @@ public sealed class BattleMap
         if (thCur != null) Backdrop(c, panel, thCur, themeName, a * themeK, nowMs);
         c.Restore();
         float themed = thCur != null ? themeK : (thPrev != null ? 1 - themeK : 0);
-        var hlCol = thCur?.Eye ?? Gold;
+        var hlCol = ylwAhead ? Mix(new SKColor(0xFF, 0xD4, 0x00), Gold, 1 - yFlash) : thCur?.Eye ?? Gold;
         using (var hl = new SKPaint { Shader = SKShader.CreateLinearGradient(new SKPoint(panel.Left, 0), new SKPoint(panel.Right, 0),
                    new[] { hlCol.WithAlpha(0), hlCol.WithAlpha(A(0.9f)), hlCol.WithAlpha(0) }, new[] { 0f, 0.5f, 1f }, SKShaderTileMode.Clamp) })
             c.DrawRect(panel.Left + 14, panel.Top, panel.Width - 28, 1.4f, hl);
@@ -219,6 +242,33 @@ public sealed class BattleMap
         var terrain = k == null ? null : TrackTerrain.For(k, Assets.Resolve("maps", k + ".json"), snap.TrackLatitude, snap.TrackLongitude, lenM);
 
         var mapR = new SKRect(panel.Left + 2, panel.Top + 56, panel.Right - 2, panel.Bottom - 26);
+        // #742: the circuit near the view only - map-space window around the view centre, generous on every side (the
+        // tilted ground shows more at the top than the box does), rebuilt only when the view has moved noticeably
+        {
+            float hx = box.Width / Math.Max(1e-4f, vs) * 1.25f, hy = box.Height / Math.Max(1e-4f, vs) * 1.6f;
+            var want = new SKRect(vc.X - hx, vc.Y - hy, vc.X + hx, vc.Y + hy);
+            float tol = Math.Min(hx, hy) * 0.15f;
+            if (vpathFor.IsEmpty || Math.Abs(want.Left - vpathFor.Left) > tol || Math.Abs(want.Top - vpathFor.Top) > tol
+                || Math.Abs(want.Right - vpathFor.Right) > tol || Math.Abs(want.Bottom - vpathFor.Bottom) > tol)
+            {
+                var keep = new SKRect(want.Left - tol * 2, want.Top - tol * 2, want.Right + tol * 2, want.Bottom + tol * 2);
+                vpathFor = want;
+                vpath.Reset();
+                int n = raw.Length; bool open = false;
+                for (int i = 0; i <= n; i++)
+                {
+                    var pt = raw[i % n];
+                    bool inside = keep.Contains(pt);
+                    bool nextIn = keep.Contains(raw[(i + 1) % n]), prevIn = keep.Contains(raw[(i - 1 + n) % n]);
+                    if (inside || nextIn || prevIn)       // a point inside or touching the window (so lines run off the edge)
+                    {
+                        if (!open) { vpath.MoveTo(pt); open = true; } else vpath.LineTo(pt);
+                    }
+                    else open = false;
+                }
+            }
+        }
+        var drawPath = vpath.IsEmpty ? path : vpath;
         int layer = c.SaveLayer(mapR, null);
         var zoomM = SKMatrix.CreateTranslation(-vc.X, -vc.Y).PostConcat(SKMatrix.CreateScale(vs, vs)).PostConcat(SKMatrix.CreateTranslation(box.MidX, box.MidY));
         // the ground, then the line's shadow on it
@@ -233,7 +283,7 @@ public sealed class BattleMap
         }
         c.Concat(ref zoomM);
         using (var shp = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeJoin = SKStrokeJoin.Round, StrokeWidth = 6f / vs, Color = new SKColor(0, 0, 0, A(0.5f)), MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 3f / vs) })
-            c.DrawPath(path, shp);
+            c.DrawPath(drawPath, shp);
         c.Restore();
         // the circuit: soft glow, then a crisp white line (widths kept in screen pixels), raised above the ground
         c.Save();
@@ -241,8 +291,8 @@ public sealed class BattleMap
         c.Translate(box.MidX, box.MidY); c.Scale(vs); c.Translate(-vc.X, -vc.Y);
         using (var glow = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round, StrokeWidth = 9f / vs,
                    Color = (thCur?.Eye ?? Gold).WithAlpha(A(0.3f)), MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 4f / vs) })
-            c.DrawPath(path, glow);
-        stroke.StrokeWidth = 2.6f / vs; stroke.Color = SKColors.White.WithAlpha(A(0.9f)); c.DrawPath(path, stroke);
+            c.DrawPath(drawPath, glow);
+        stroke.StrokeWidth = 2.6f / vs; stroke.Color = SKColors.White.WithAlpha(A(0.9f)); c.DrawPath(drawPath, stroke);
         c.Restore();
         // the corner / straight coming up, lit in its own colour (on the raised plane)
         c.Save(); c.Translate(0, -Lift); c.Concat(ref persp);
@@ -265,6 +315,22 @@ public sealed class BattleMap
             stroke.StrokeWidth = 2.4f; stroke.Color = Ivory.WithAlpha(A(0.9f)); c.DrawLine(s0.X - nx, s0.Y - ny, s0.X + nx, s0.Y + ny, stroke);
         }
         c.Restore();
+        // the yellow flag spot: a flashing amber halo with a little marshal flag
+        if (ylwAhead)
+        {
+            var yq = PT(RawAt(YellowFlagCallout.CurrentPct));
+            var yc = new SKColor(0xFF, 0xD4, 0x00);
+            using (var yh = new SKPaint { IsAntialias = true, Color = yc.WithAlpha(A(0.18f + 0.3f * yFlash)), MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 6) })
+                c.DrawCircle(yq, 15f + 5f * yFlash, yh);
+            fill.Color = new SKColor(0, 0, 0, A(0.7f)); c.DrawCircle(yq, 6.5f, fill);
+            fill.Color = yc.WithAlpha(A(0.55f + 0.45f * yFlash)); c.DrawCircle(yq, 4.8f, fill);
+            stroke.StrokeWidth = 1.6f; stroke.Color = Ivory.WithAlpha(A(0.9f)); c.DrawLine(yq.X, yq.Y - 6, yq.X, yq.Y - 24, stroke);
+            using (var fp = new SKPath())
+            {
+                fp.MoveTo(yq.X, yq.Y - 24); fp.LineTo(yq.X + 13, yq.Y - 21); fp.LineTo(yq.X, yq.Y - 16); fp.Close();
+                fill.Color = yc.WithAlpha(A(0.6f + 0.4f * yFlash)); c.DrawPath(fp, fill);
+            }
+        }
         // everyone else, faint
         var inBattle = new HashSet<int>(bc.Select(d => d.CarIdx));
         foreach (var cl in snap.ClassLeaderboard)
@@ -308,6 +374,22 @@ public sealed class BattleMap
             c.DrawRect(mapR, my);
         c.RestoreToCount(layer);
 
+        if (ylwAhead || (cruise && bc.Count < 2))
+        {
+            // the foot (regular mode / a yellow ahead): how far to the yellow, or where we are
+            text.TextAlign = SKTextAlign.Left; text.Typeface = Fonts.Inter.Bold; text.TextSize = 13f;
+            text.Color = ylwAhead ? new SKColor(0xFF, 0xD4, 0x00, A(1)) : new SKColor(0xC4, 0xCA, 0xD4, A(1));
+            TextTracked.Draw(c, text, ylwAhead ? "YELLOW AHEAD" : "ON TRACK", panel.Left + 16, panel.Bottom - 11, 1.8f);
+            if (ylwAhead)
+            {
+                double m = yRel * lenM;
+                text.TextAlign = SKTextAlign.Right; text.Typeface = Fonts.BarlowCondensed.ExtraBold; text.TextSize = 18; text.Color = Ivory.WithAlpha(A(1));
+                c.DrawText(m < 60 ? "HERE" : m >= 1000 ? (m / 1000).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " km" : ((int)(m / 10) * 10) + " m",
+                           panel.Right - 16, panel.Bottom - 9, text);
+            }
+            text.TextAlign = SKTextAlign.Center;
+            return;
+        }
         // the foot: the gap between the front and the back of the fight
         var rear = bc.OrderBy(d => Rel(d.LapDistPct)).First();
         var lead = bc.OrderBy(d => Rel(d.LapDistPct)).Last();
@@ -345,6 +427,7 @@ public sealed class BattleMap
             float tot = cu[^1]; if (tot <= 0) return;
             for (int i = 0; i < cu.Length; i++) cu[i] /= tot;
             raw = list.ToArray(); cum = cu;
+            vpath.Reset(); vpathFor = SKRect.Empty;
             path.Reset();
             for (int i = 0; i < raw.Length; i++) { if (i == 0) path.MoveTo(raw[i]); else path.LineTo(raw[i]); }
             path.Close();

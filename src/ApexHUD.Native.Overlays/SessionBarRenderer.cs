@@ -269,22 +269,82 @@ public sealed class SessionBarRenderer : IDisposable
     static readonly SKColor LbYellow = new(0xFF, 0xC1, 0x07);
     const float LbCell = 3.6f;   // LED pitch of the board texture
 
+    // 2026-10-31 (#684, Angelo: "you know how the yellow flag does the effect on the session bar? I want every flag to
+    // have their own version of that whether the session bar is in regular mode or battle mode"): the light box is now
+    // a marshal's LED board for EVERY flag, each with its own colour and pattern. Persistent flags (red, black, meatball,
+    // DQ, yellow, full-course yellow) show while they're out (at least 4 s); the moment flags (green, white, blue,
+    // checkered) show for a few seconds when they come out. Same place, same size, same watch alcove as the yellow.
+    enum LbKind { None, Yellow, Fcy, Green, White, Red, Blue, Black, Meatball, Checkered, Dq }
+    enum LbPat { Alternate, Together, Sweep, Pulse, Checker, Border }
+    readonly record struct LbStyle(SKColor Lit, SKColor Dim, LbPat Pat, string Left, string Right);
+
+    LbKind lbKind = LbKind.None; bool lbPrimed;
+    bool lbPGreen, lbPWhite, lbPChk, lbPBlue, lbPCaution;
+    double lbGreenUntil = -1, lbWhiteUntil = -1, lbChkUntil = -1, lbBlueUntil = -1, lbBlueQuietUntil = -1;
+    SKPoint[] lbAll = Array.Empty<SKPoint>(), lbChkA = Array.Empty<SKPoint>(), lbChkB = Array.Empty<SKPoint>(),
+              lbEdge = Array.Empty<SKPoint>(), lbInner = Array.Empty<SKPoint>();
+
+    LbKind PickFlag(RaceSnapshot snap, double now)
+    {
+        var f = snap.Flags;
+        bool racing = snap.IsConnected && snap.Phase == RacePhase.Broadcast;
+        if (!racing) { lbPrimed = false; return LbKind.None; }
+        bool caution = f.Caution || f.Yellow || YellowFlagCallout.YellowNow;
+        if (!lbPrimed)
+        {   // first frame of a session (or after loading in mid-race): remember the flags, don't fire the "moment" ones
+            lbPrimed = true;
+            lbPGreen = f.Green; lbPWhite = f.White; lbPChk = f.Checkered; lbPBlue = f.Blue; lbPCaution = caution;
+        }
+        if (f.Checkered && !lbPChk) lbChkUntil = now + 10000;
+        if (f.White && !lbPWhite) lbWhiteUntil = now + 6000;
+        if (f.Green && !lbPGreen) lbGreenUntil = now + 4000;
+        if (!caution && lbPCaution && !f.Checkered && !f.Red) lbGreenUntil = now + 4000;   // the yellow is cleared: green
+        if (f.Blue && !lbPBlue && now >= lbBlueQuietUntil) { lbBlueUntil = now + 5000; lbBlueQuietUntil = now + 45000; }
+        lbPGreen = f.Green; lbPWhite = f.White; lbPChk = f.Checkered; lbPBlue = f.Blue; lbPCaution = caution;
+
+        if (now < lbChkUntil) return LbKind.Checkered;
+        if (f.Checkered) return LbKind.None;            // after the finish: the classification takes over
+        if (f.Red) return LbKind.Red;
+        if (f.Disqualify) return LbKind.Dq;
+        if (f.Black) return LbKind.Black;
+        if (f.Repair) return LbKind.Meatball;
+        if (f.Caution) return LbKind.Fcy;
+        if (f.Yellow || YellowFlagCallout.YellowNow) return LbKind.Yellow;
+        if (now < lbWhiteUntil) return LbKind.White;
+        if (now < lbBlueUntil) return LbKind.Blue;
+        if (now < lbGreenUntil) return LbKind.Green;
+        return LbKind.None;
+    }
+
+    static LbStyle StyleFor(LbKind k) => k switch
+    {
+        LbKind.Fcy       => new(new(0xFF, 0xC1, 0x07), new(0x2A, 0x20, 0x04), LbPat.Alternate, "FULL COURSE YELLOW", ""),
+        LbKind.Green     => new(new(0x22, 0xC5, 0x5E), new(0x06, 0x24, 0x0F), LbPat.Sweep, "GREEN FLAG", "RACING"),
+        LbKind.White     => new(new(0xF2, 0xF2, 0xF2), new(0x26, 0x26, 0x26), LbPat.Pulse, "WHITE FLAG", "FINAL LAP"),
+        LbKind.Red       => new(new(0xDC, 0x26, 0x26), new(0x2A, 0x08, 0x08), LbPat.Together, "RED FLAG", "SESSION STOPPED"),
+        LbKind.Blue      => new(new(0x3B, 0x82, 0xF6), new(0x0A, 0x16, 0x30), LbPat.Alternate, "BLUE FLAG", "FASTER CAR BEHIND"),
+        LbKind.Black     => new(new(0xF2, 0xF2, 0xF2), new(0x16, 0x16, 0x16), LbPat.Border, "BLACK FLAG", "SERVE PENALTY"),
+        LbKind.Dq        => new(new(0xF2, 0xF2, 0xF2), new(0x16, 0x16, 0x16), LbPat.Border, "DISQUALIFIED", ""),
+        LbKind.Meatball  => new(new(0xFF, 0x7A, 0x00), new(0x2A, 0x14, 0x00), LbPat.Together, "MEATBALL FLAG", "PIT FOR REPAIRS"),
+        LbKind.Checkered => new(new(0xF2, 0xF2, 0xF2), new(0x14, 0x14, 0x14), LbPat.Checker, "CHECKERED FLAG", "FINISH"),
+        _                => new(LbYellow, new(0x2A, 0x20, 0x04), LbPat.Alternate, "YELLOW FLAG", ""),
+    };
+
     void DrawYellowLightBox(SKCanvas c, RaceSnapshot snap, double elapsedMs)
     {
         double dt = lbLastMs < 0 ? 16 : Math.Clamp(elapsedMs - lbLastMs, 0, 100); lbLastMs = elapsedMs;
-        bool racing = snap.IsConnected && snap.Phase == RacePhase.Broadcast;
-        bool fcy = racing && snap.Flags.Caution;
-        bool yel = racing && (snap.Flags.Yellow || YellowFlagCallout.YellowNow || fcy) && !snap.Flags.Red && !snap.Flags.Checkered;   // 2026-10-25: also Grandstand's own yellows (replays)
-        if (yel && lbSinceMs < 0) lbSinceMs = elapsedMs;
-        bool hold = lbSinceMs >= 0 && elapsedMs - lbSinceMs < 4000;      // at least a few seconds, even for a short yellow
-        bool on = yel || hold;
-        if (!on) lbSinceMs = -1;
+        var want = PickFlag(snap, elapsedMs);
+        bool hold = lbKind != LbKind.None && lbSinceMs >= 0 && elapsedMs - lbSinceMs < 4000;   // at least a few seconds
+        if (want == LbKind.None && hold) want = lbKind;
+        if (want != LbKind.None && want != lbKind) { lbKind = want; lbSinceMs = elapsedMs; }
+        bool on = want != LbKind.None;
         lbAlpha = Math.Clamp(lbAlpha + (float)(dt / 220.0) * (on ? 1 : -1), 0f, 1f);
-        if (lbAlpha <= 0.01f) return;
+        if (lbAlpha <= 0.01f) { if (!on) { lbKind = LbKind.None; lbSinceMs = -1; } return; }
         float a = lbAlpha * lbAlpha * (3 - 2 * lbAlpha);
         float w = currentBarWidth, h = BarHeight;
-        string left = fcy ? "FULL COURSE YELLOW" : "YELLOW FLAG";
-        string right = fcy ? "" : YellowFlagCallout.CurrentPlace;
+        var st = StyleFor(lbKind);
+        string left = st.Left;
+        string right = lbKind == LbKind.Yellow ? YellowFlagCallout.CurrentPlace : st.Right;
         string key = $"{w:0}|{h:0}";
         if (key != lbKey) { lbKey = key; BuildLightBox(w, h); }
 
@@ -294,16 +354,59 @@ public sealed class SessionBarRenderer : IDisposable
         using (var hole = new SKPath()) { hole.AddCircle(w / 2f, h / 2f, WatchAlcoveRadius - 10f); using var cut = clip.Op(hole, SKPathOp.Difference); clip.Reset(); clip.AddPath(cut); }
         c.Save();
         c.ClipPath(clip, antialias: true);
-        bool leftLit = ((int)(elapsedMs / 450) & 1) == 0;                   // the halves swap about twice a second
         using (var bg = new SKPaint { Color = new SKColor(6, 6, 6, (byte)(245 * a)) }) c.DrawRect(bar, bg);
-        using (var dot = new SKPaint { IsAntialias = true, StrokeCap = SKStrokeCap.Round })
-            foreach (var (pts, lit) in new[] { (lbLeft, leftLit), (lbRight, !leftLit) })
+        using var dot = new SKPaint { IsAntialias = true, StrokeCap = SKStrokeCap.Round };
+        void Dots(SKPoint[] pts, SKColor col, bool glow)
+        {
+            if (pts.Length == 0) return;
+            dot.StrokeWidth = LbCell * 0.7f; dot.Color = col.WithAlpha((byte)(col.Alpha * a));
+            c.DrawPoints(SKPointMode.Points, pts, dot);
+            if (glow) { dot.StrokeWidth = LbCell * 1.1f; dot.Color = col.WithAlpha((byte)(70 * a)); c.DrawPoints(SKPointMode.Points, pts, dot); }
+        }
+        // per pattern: which side is lit (for the words), and the LEDs
+        bool leftLit = true, rightLit = true; SKColor? txt = null; bool plate = false;
+        switch (st.Pat)
+        {
+            case LbPat.Alternate:                                       // the two halves flash in turn (marshal lights)
+                leftLit = ((int)(elapsedMs / 450) & 1) == 0; rightLit = !leftLit;
+                Dots(lbLeft, leftLit ? st.Lit : st.Dim, leftLit); Dots(lbRight, rightLit ? st.Lit : st.Dim, rightLit);
+                break;
+            case LbPat.Together:                                        // the whole board flashes (stop / pit now)
+                leftLit = rightLit = ((int)(elapsedMs / 400) & 1) == 0;
+                Dots(lbAll, leftLit ? st.Lit : st.Dim, leftLit);
+                break;
+            case LbPat.Sweep:                                           // a green wave runs across the board: go
             {
-                dot.StrokeWidth = LbCell * 0.7f;
-                dot.Color = lit ? LbYellow.WithAlpha((byte)(255 * a)) : new SKColor(0x2A, 0x20, 0x04, (byte)(255 * a));
-                c.DrawPoints(SKPointMode.Points, pts, dot);
-                if (lit) { dot.StrokeWidth = LbCell * 1.1f; dot.Color = LbYellow.WithAlpha((byte)(70 * a)); c.DrawPoints(SKPointMode.Points, pts, dot); }
+                Dots(lbAll, st.Dim, false);
+                float band = w * 0.28f, pos = (float)(elapsedMs % 1100 / 1100.0) * (w + band) - band;
+                c.Save(); c.ClipRect(new SKRect(pos, 0, pos + band, h)); Dots(lbAll, st.Lit, true); c.Restore();
+                txt = SKColors.White;
+                break;
             }
+            case LbPat.Pulse:                                           // white: a slow, steady glow
+            {
+                float k = 0.6f + 0.4f * MathF.Sin((float)(elapsedMs / 1000.0 * Math.PI * 1.6));
+                var col = new SKColor((byte)(st.Dim.Red + (st.Lit.Red - st.Dim.Red) * k), (byte)(st.Dim.Green + (st.Lit.Green - st.Dim.Green) * k),
+                                      (byte)(st.Dim.Blue + (st.Lit.Blue - st.Dim.Blue) * k));
+                Dots(lbAll, col, k > 0.8f);
+                txt = new SKColor(0x08, 0x08, 0x08);
+                break;
+            }
+            case LbPat.Checker:                                         // a checkerboard of LEDs that flips
+            {
+                bool ph = ((int)(elapsedMs / 500) & 1) == 0;
+                Dots(lbChkA, ph ? st.Lit : st.Dim, ph); Dots(lbChkB, ph ? st.Dim : st.Lit, !ph);
+                txt = SKColors.White; plate = true;
+                break;
+            }
+            case LbPat.Border:                                          // dark board, a white frame of LEDs flashing
+            {
+                bool fl = ((int)(elapsedMs / 400) & 1) == 0;
+                Dots(lbInner, st.Dim, false); Dots(lbEdge, fl ? st.Lit : st.Dim, fl);
+                txt = SKColors.White;
+                break;
+            }
+        }
         // the words, plain type, each centred in its half clear of the watch
         using var tp = new SKPaint { IsAntialias = true, Typeface = Fonts.BarlowCondensed.Black, TextSize = h * 0.6f };
         float sp = tp.TextSize * 0.06f;
@@ -314,11 +417,16 @@ public sealed class SessionBarRenderer : IDisposable
             if (t.Length == 0) return;
             tp.TextSize = h * 0.6f; while (Tw(t) > z1 - z0 && tp.TextSize > 12) tp.TextSize -= 1;
             sp = tp.TextSize * 0.06f;
-            tp.Color = lit ? new SKColor(0x08, 0x08, 0x08, (byte)(255 * a)) : LbYellow.WithAlpha((byte)(255 * a));
-            TextTracked.Draw(c, tp, t, (z0 + z1) / 2f - Tw(t) / 2f, h / 2f + tp.TextSize * 0.36f, sp);
+            float x = (z0 + z1) / 2f - Tw(t) / 2f, y = h / 2f + tp.TextSize * 0.36f;
+            if (plate)
+                using (var pp = new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, (byte)(215 * a)) })
+                    c.DrawRoundRect(new SKRect(x - 12, h * 0.14f, x + Tw(t) + 12, h * 0.86f), 6, 6, pp);
+            var col = txt ?? (lit ? new SKColor(0x08, 0x08, 0x08) : st.Lit);
+            tp.Color = col.WithAlpha((byte)(255 * a));
+            TextTracked.Draw(c, tp, t, x, y, sp);
         }
         Put(left, zl0, zl1, leftLit);
-        Put(right, zr0, zr1, !leftLit);
+        Put(right, zr0, zr1, rightLit);
         c.Restore();
     }
 
@@ -327,13 +435,20 @@ public sealed class SessionBarRenderer : IDisposable
         int cols = (int)(w / LbCell), rows = (int)(h / LbCell);
         float ox = (w - cols * LbCell) / 2f + LbCell / 2f, oy = (h - rows * LbCell) / 2f + LbCell / 2f;
         var l = new List<SKPoint>(cols * rows / 2); var r = new List<SKPoint>(cols * rows / 2);
+        var all = new List<SKPoint>(cols * rows); var ca = new List<SKPoint>(); var cb = new List<SKPoint>();
+        var edge = new List<SKPoint>(); var inner = new List<SKPoint>();
+        int sq = Math.Max(2, rows / 3);                                   // checker squares: three rows of them
         for (int row = 0; row < rows; row++)
             for (int col = 0; col < cols; col++)
             {
                 var pt = new SKPoint(ox + col * LbCell, oy + row * LbCell);
                 (pt.X < w / 2f ? l : r).Add(pt);
+                all.Add(pt);
+                (((col / sq) + (row / sq)) % 2 == 0 ? ca : cb).Add(pt);
+                (row < 2 || row >= rows - 2 || col < 3 || col >= cols - 3 ? edge : inner).Add(pt);
             }
-        lbLeft = l.ToArray(); lbRight = r.ToArray();
+        lbLeft = l.ToArray(); lbRight = r.ToArray(); lbAll = all.ToArray(); lbChkA = ca.ToArray(); lbChkB = cb.ToArray();
+        lbEdge = edge.ToArray(); lbInner = inner.ToArray();
     }
 
     static byte Marshal_Alpha(SKBitmap bmp, int x, int y) =>

@@ -46,6 +46,8 @@ namespace ApexHUD.Native.GpuHost
                 return HeroShot.Run();
             if (args.Any(a => string.Equals(a, "--bar-shot", StringComparison.OrdinalIgnoreCase)))
                 return BarShot.Run(args);
+            if (args.Any(a => string.Equals(a, "--flag-shot", StringComparison.OrdinalIgnoreCase)))
+                return BarShot.Flags(args);
 
             // 2026-10-29 (efficiency): the render thread must never sit in a blocking full garbage collection mid-race -
             // background (concurrent) collections only, unless memory runs really low (then .NET still does what it must)
@@ -63,6 +65,19 @@ namespace ApexHUD.Native.GpuHost
                 if (string.Equals(args[i], "--seconds", StringComparison.OrdinalIgnoreCase)
                     && int.TryParse(args[i + 1], out int s)) autoQuitSeconds = s;
 
+            // 2026-10-31: keep the last run's log (a race's frame-cost history was lost on every restart) - the previous
+            // five runs stay in Documents\iRacing\gpu_host_logs\
+            try
+            {
+                if (File.Exists(LogPath))
+                {
+                    string dir = Path.Combine(Path.GetDirectoryName(LogPath)!, "gpu_host_logs");
+                    Directory.CreateDirectory(dir);
+                    File.Copy(LogPath, Path.Combine(dir, $"gpu_host_{File.GetLastWriteTime(LogPath):yyyy-MM-dd_HH-mm-ss}.txt"), true);
+                    foreach (var old in new DirectoryInfo(dir).GetFiles("gpu_host_*.txt").OrderByDescending(f => f.Name).Skip(40)) old.Delete();   // 40 runs (5 was used up by a night of restarts)
+                }
+            }
+            catch { }
             try { File.WriteAllText(LogPath, $"# Grandstand GPU host (Phase C) — {DateTime.Now:yyyy-MM-dd HH:mm:ss}\r\n"); }
             catch { /* logging is best-effort */ }
 

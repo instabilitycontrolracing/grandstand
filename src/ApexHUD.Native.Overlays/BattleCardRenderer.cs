@@ -668,6 +668,13 @@ public sealed class BattleCardRenderer : IDisposable
                     gapF = cand.GapBehindSeconds ?? double.NaN;
                 }
 
+                // 2026-10-31 (Angelo: the five-way card "hung for a while with the wrong information" after the cars
+                // took off): the opening-lap force only holds while the fight is still close - once the real gap
+                // (measured on the road on lap 1) is past the exit threshold, the normal 2.0 / 2.3 s rule decides
+                if (!double.IsNaN(gapF) && gapF > ExitThresholdS
+                    && !(cand.GapAheadSeconds is double fa && fa <= ExitThresholdS)
+                    && !(cand.GapBehindSeconds is double fb && fb <= ExitThresholdS))
+                    goto normalRule;
                 int microF = pickedF == BattleState.Attack
                     ? opponentF.PositionInClass
                     : cand.Player.PositionInClass;
@@ -677,6 +684,7 @@ public sealed class BattleCardRenderer : IDisposable
             // Solo in class — no peer; let the 2.0s path return None below.
         }
 
+        normalRule:
         // 2.0s rule with hysteresis: enter at gap <= 2.0s; once on, stay on
         // until no same-class neighbour is within 2.3s.
         double threshold = state == BattleState.None ? EnterThresholdS : ExitThresholdS;

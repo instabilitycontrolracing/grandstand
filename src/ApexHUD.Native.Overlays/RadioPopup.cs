@@ -33,7 +33,7 @@ public static class RadioFeed
 public sealed class RadioPopupRenderer
 {
     public const float Width = 330f;   // near-square (Angelo 2026-10-24: "way too long horizontally")
-    const double InMs = 320, OutMs = 360, MinMs = 3800, MsPerChar = 55, MaxMs = 9500;
+    const double InMs = 320, OutMs = 360, MinMs = 3800, MsPerChar = 55, MaxMs = 9500, BusyMinMs = 1600;
 
     static readonly SKColor Glass = Hex(BroadcastPalette.TowerGlassBase, 214);
     static readonly SKColor Ivory = Hex(BroadcastPalette.TextPrimary);
@@ -79,6 +79,12 @@ public sealed class RadioPopupRenderer
         // race control is the exception (2026-10-23): "go to the grid" and "formation lap" ARE the pre-green moments
         bool armed = PresentationState.NotificationsArmed;
         if (!armed && cur != null && cur.Who != "RACE CONTROL" && nowMs - startMs < holdMs) holdMs = Math.Max(0, nowMs - startMs);
+        // #674 (2026-10-31, Angelo: "the audio from the radio calls being ahead of the text popup ... during heavy
+        // moments"): each card held 3.8-9.5 s, so in a burst of calls every new card waited behind the last while its
+        // voice was already playing (the engineer sends each line the moment it starts talking). Now, when the next
+        // line is already waiting, the card on screen leaves after 1.6 s - the captions stay with the voice.
+        if (cur != null && cues == null && RadioFeed.Waiting && nowMs - startMs > BusyMinMs && nowMs - startMs < holdMs)
+            holdMs = nowMs - startMs;
         if (cur != null && nowMs - startMs > holdMs + OutMs) cur = null;
         while (cur == null && RadioFeed.TryTake(out var l) && l != null)
         {

@@ -271,7 +271,9 @@ public static partial class RaceDiary
                     lastPit[d.CarIdx] = now;
                 }
                 bool nearPits = lastPit.TryGetValue(d.CarIdx, out var lp) && (now - lp).TotalSeconds < 25;
-                if (started && off && !offBefore && !nearPits && d.LapDistPct >= 0 && (!lastOff.TryGetValue(d.CarIdx, out var lo) || (now - lo).TotalSeconds > 3))
+                // #700: an off within 5 s after a contact was caused by the contact - not a track-limits trip
+                bool afterContact = contactAt.TryGetValue(d.CarIdx, out var cAt) && (now - cAt).TotalSeconds < 5;
+                if (started && off && !offBefore && !nearPits && !afterContact && d.LapDistPct >= 0 && (!lastOff.TryGetValue(d.CarIdx, out var lo) || (now - lo).TotalSeconds > 3))
                 { offs[d.CarIdx] = OffsOf(d.CarIdx) + 1; offSpots.Add((d.CarIdx, d.LapDistPct)); pendingOff[d.CarIdx] = (now, d.LapDistPct); }
                 if (off) lastOff[d.CarIdx] = now;
                 wasOff[d.CarIdx] = off;
@@ -308,6 +310,7 @@ public static partial class RaceDiary
                                  o?.CarIdx ?? -1, o != null ? NameFormat.Broadcast(o) : null, o?.CarBrand, j >= 0 ? rises[j].Delta : 0, o?.Incidents ?? 0, now, d.LapDistPct);
             contacts.Add(ct);
             contactAt[d.CarIdx] = now; if (o != null) contactAt[o.CarIdx] = now;
+            DropOffFromContact(d.CarIdx, now); if (o != null) DropOffFromContact(o.CarIdx, now);   // #700
             // the player's own contact is the headline when it involves them
             if (ContactEvent == null || d.CarIdx == snap.PlayerCarIdx || o?.CarIdx == snap.PlayerCarIdx || ct.Points + ct.OtherPoints > ContactEvent.Points + ContactEvent.OtherPoints)
                 ContactEvent = ct;

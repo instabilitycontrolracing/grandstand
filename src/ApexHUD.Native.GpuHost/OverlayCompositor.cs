@@ -109,6 +109,8 @@ internal sealed class OverlayCompositor : IDisposable
     readonly OnboardFullRenderer onboard = new();
     readonly PackCardRenderer pack = new();
     readonly PitBattleCard pitCard = new();
+    readonly PitBattleCard pitSolo = new();   // #716: our own pit stop board (bottom centre, in place of the driver card)
+    bool pitSoloOn;
     SKNoDrawCanvas? pitNoDraw;
     readonly SKPaint packFade = new();
     SKNoDrawCanvas? packNoDraw;   // full-screen onboard (2026-10-24); OnboardRenderer = the small card
@@ -292,6 +294,22 @@ internal sealed class OverlayCompositor : IDisposable
             },
         });
 
+        // #716 (2026-10-31, Angelo): during OUR race pit stop the orange-and-black pit lane board takes the driver card's
+        // spot, bottom centre (the two-car "pit lane battle" version stays in the battle slot when a rival pits with us)
+        entries.Add(new Entry
+        {
+            Name = "pitsolo",
+            HideOnOnboard = true,
+            Visible = () => pitSoloOn,
+            OnsetMs = 420,
+            Continuous = true,
+            Cacheable = false,
+            Paint = (c, snap, nowMs, w, h) =>
+            {
+                if (snap.Player is { } me) pitSolo.Draw(c, w / 2f, h - 16f, snap, me, null, 0, nowMs, 1f);
+            },
+        });
+
         // ===== Batch 2-5: the rest of the suite (positions mirror the WPF windows) =====
 
         // Standings ticker - full-width strip flush under the session-bar line
@@ -383,6 +401,29 @@ internal sealed class OverlayCompositor : IDisposable
             },
         });
 
+
+        // 2026-10-31 (Angelo: "the mini map ... on the main screen too in the top right when I am in regular mode ... make it
+        // bow out when the cards come in from the side ... as well as when race control messages come through ... make sure it
+        // isn't in the way of anything"): the battle map's twin, same spot (top right under the bar), our car + the class cars
+        // within ~1.5 s, yellow flags flagged. Fades out for battles (the battle map takes over), onboards, replays, the intro,
+        // story / custom / viewer cards, race control, the latest-viewer plate and the radio card if it reaches up there.
+        entries.Add(new Entry
+        {
+            Name = "minimap",
+            HideOnOnboard = true,
+            Bounds = static () => Grow(VpLayout.CruiseMap, 60f),
+            Visible = () => cruiseMap.Alpha > 0.01f || CruiseMapRuleOn(currentNowMs),
+            Continuous = true,
+            OnsetMs = 320,
+            Paint = (c, snap, nowMs, w, h) =>
+            {
+                var r = new SKRect(w - 24f - BattleMap.W, 172f, w - 24f, 172f + BattleMap.H);
+                VpLayout.CruiseMap = r;
+                bool show = CruiseMapRuleOn(nowMs);
+                VpLayout.CruiseMapVisible = show;
+                cruiseMap.Draw(c, r.Left, r.Top, snap, CruiseCars(snap), show, nowMs, cruise: true);
+            },
+        });
 
         // Starting grid - centred 1100x830 slot; phase-gated (pre-race grid /
         // post-race classification). 520 ms cross-fade + overhang.
@@ -876,6 +917,41 @@ internal sealed class OverlayCompositor : IDisposable
 
     /// <summary>#619: where the race-control bar hangs: under the session bar plate (regular), under the ticker (battle), or
     /// under the onboard's corner / straight name; never into the radio column.</summary>
+    readonly BattleMap cruiseMap = new();
+    static readonly List<int> cruiseCars = new();
+
+    bool CruiseMapRuleOn(double nowMs)
+    {
+        if (!PresentationState.TowerVisible || PresentationState.OnboardK > 0.02f || PresentationState.ReplayHideK > 0.02f) return false;
+        if (OutroDirector.FullScreen || ViewerTierRenderer.FullScreen || SceneDirector.SplashActive) return false;
+        if (StoryDirector.Visible || StoryDirector.MiniVisible || CustomCards.Visible || viewerCards.Visible) return false;
+        if (viewerTiers.Visible || rcBar.IsActive(nowMs) || latestPlate.Active) return false;
+        var r = new SKRect(VpLayout.CruiseMap.Left - 12f, VpLayout.CruiseMap.Top - 12f, VpLayout.CruiseMap.Right + 12f, VpLayout.CruiseMap.Bottom + 12f);
+        if (VpLayout.RadioVisible && VpLayout.Radio.IntersectsWith(r)) return false;
+        if (VpLayout.ClaimHits(r, nowMs)) return false;                 // a visual-pack card (weather, yellow map...) came in
+        return true;
+    }
+
+    static IReadOnlyList<int> CruiseCars(RaceSnapshot snap)
+    {
+        cruiseCars.Clear();
+        var me = snap.Player;
+        if (me == null || me.LapDistPct < 0) return cruiseCars;
+        cruiseCars.Add(me.CarIdx);
+        double lapS = me.BestLapTime > 0 ? me.BestLapTime : me.LastLapTime > 0 ? me.LastLapTime : 240;
+        foreach (var cl in snap.ClassLeaderboard)
+        {
+            if (!cl.Drivers.Any(d => d.CarIdx == me.CarIdx)) continue;
+            foreach (var d in cl.Drivers)
+            {
+                if (d.CarIdx == me.CarIdx || d.LapDistPct < 0 || d.IsInPit) continue;
+                float rel = d.LapDistPct - me.LapDistPct; if (rel > 0.5f) rel -= 1; if (rel < -0.5f) rel += 1;
+                if (Math.Abs(rel) * lapS <= 1.5) cruiseCars.Add(d.CarIdx);
+            }
+        }
+        return cruiseCars;
+    }
+
     void RcAnchor(int w, out float cx, out float top, out float regularK, out float maxRight)
     {
         bool onboard = PresentationState.OnboardActive && PresentationState.IsRacing && PresentationState.OnboardK > 0.5f;
@@ -913,6 +989,7 @@ internal sealed class OverlayCompositor : IDisposable
         if (VpLayout.FeaturedVisible) Add(VpLayout.Featured);
         if (VpLayout.BattleCardVisible) Add(VpLayout.BattleCard);
         if (VpLayout.BattleMapVisible) Add(VpLayout.BattleMap);
+        if (VpLayout.CruiseMapVisible) Add(VpLayout.CruiseMap);
         if (VpLayout.RadioVisible) Add(VpLayout.Radio);
         if (VpLayout.CustomVisible) Add(VpLayout.Custom);
         if (snap.Phase == RacePhase.PreRace && StartingGridRenderer.CardsStartMs >= 0)
@@ -1285,6 +1362,16 @@ internal sealed class OverlayCompositor : IDisposable
                 CameraFree = ReplayState.IsReplay && !ControlState.Current.Director,
             };
             StoryCards.RadioOn = ctx.RadioActive;   // #517: story cards take their split layout around the radio card
+            // #716: our pit stop board - race, green-flag running, we are on pit road, and no rival is in the pit lane battle
+            {
+                pitSolo.Tick(snap, null, nowMs);
+                bool pitBattle = snap.Player is { IsInPit: true } && battle.Opponent is { IsInPit: true } && battle.IsActive;
+                bool on = PresentationState.IsRaceSession && PresentationState.IsRacing && PresentationState.Lap1Complete
+                          && snap.Player is { IsInPit: true } && !pitBattle && !ReplayState.IsReplay;
+                if (!on && pitSoloOn) pitSolo.Hidden();
+                pitSoloOn = on;
+                PresentationState.PitStopShowing = on;
+            }
             vp.Tick(snap, nowMs, ctx);
             // 2026-10-27 round 2: where the live graphics are (the cards place themselves around them), and #337: the
             // session bar takes its battle-mode look (full width + ticker) while the replay bumper plays

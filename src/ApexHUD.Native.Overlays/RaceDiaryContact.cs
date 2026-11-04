@@ -55,14 +55,34 @@ public static partial class RaceDiary
                     if (gap < best) { best = gap; o = d2; oc = cn2; }
                 }
                 if (o == null && !hardStop) continue;               // off on his own: that's a track-limits trip, not contact
+                // #700 (2026-10-31, Angelo: "we need to be able to tell what is a collision versus what is an off track"):
+                // going off with a car within 15 m is normal in traffic (a GT3 running wide while it's passed) - it was
+                // being logged as contact. Live, iRacing's own points decide (4x = car contact, the points path above);
+                // only a dead stop counts from motion. In a replay FILE (no points for other cars) an off counts as
+                // contact only when the other car is right there (6 m) and off the track too.
+                if (!hardStop && !ReplayState.IsReplayFile) continue;
+                if (!hardStop && (o == null || best >= 6 || !o.OffTrack)) continue;
                 if (o != null && contactAt.TryGetValue(o.CarIdx, out var lo) && (now - lo).TotalSeconds < 10) continue;
                 contactAt[d.CarIdx] = now; if (o != null) contactAt[o.CarIdx] = now;
                 var ct = new Contact(d.CarIdx, NameFormat.Broadcast(d), d.CarBrand, cn, Math.Max(1, d.LapsCompleted + 1), -1, Math.Max(0, d.Incidents),
                                      o?.CarIdx ?? -1, o != null ? NameFormat.Broadcast(o) : null, o?.CarBrand, o != null ? -1 : 0, Math.Max(0, o?.Incidents ?? 0), now, d.LapDistPct);
                 contacts.Add(ct);
+                DropOffFromContact(d.CarIdx, now); if (o != null) DropOffFromContact(o.CarIdx, now);   // #700
                 OverlayLog.Write($"[diary] contact (from the cars' motion): #{d.CarNumber}" + (o != null ? $" and #{o.CarNumber}" : "") + (hardStop ? " - stopped hard" : " - off together"));
                 if (ContactEvent == null || d.CarIdx == snap.PlayerCarIdx || o?.CarIdx == snap.PlayerCarIdx) ContactEvent = ct;
             }
+        }
+    }
+
+    /// <summary>#700: an off that was part of a contact (knocked off / spun off after the hit) is not a track-limits
+    /// trip - it comes off the On the Limit count.</summary>
+    static void DropOffFromContact(int idx, DateTime now)
+    {
+        if (pendingOff.TryGetValue(idx, out var po) && (now - po.At).TotalSeconds < 5)
+        {
+            int at = offSpots.FindLastIndex(x => x.CarIdx == idx && x.Pct == po.Pct);
+            if (at >= 0) { offSpots.RemoveAt(at); offs[idx] = Math.Max(0, OffsOf(idx) - 1); }
+            pendingOff.Remove(idx);
         }
     }
 

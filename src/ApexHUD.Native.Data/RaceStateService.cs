@@ -972,7 +972,11 @@ public sealed partial class RaceStateService : IDisposable
                 float ba = Best(ahead), bb = Best(behind);
                 return ba > 0 && bb > 0 ? Math.Max(0.0, bb - ba) : null;
             }
-            if (RaceF2Ok(ahead) && RaceF2Ok(behind))
+            // 2026-10-31 (Angelo, lap-1 battle: "the gap numbers were just stuck on 0.0 ... even when the cars took off"):
+            // on the opening lap iRacing's F2 still holds the gaps from the start line (the grid spacing) and only
+            // refreshes at the line - so until both cars have started lap 2, measure them on the road instead
+            bool openingLap = ahead.CurrentLap <= 1 || behind.CurrentLap <= 1;
+            if (!openingLap && RaceF2Ok(ahead) && RaceF2Ok(behind))
             {
                 double g = F2(behind) - F2(ahead);
                 if (g > 0) return g;
@@ -1250,7 +1254,9 @@ public sealed partial class RaceStateService : IDisposable
             Humidity: d.RelativeHumidity == null ? -1f : F(d.RelativeHumidity),
             Skies: I(d.Skies), PrecipNow: F(d.Precipitation), RainChancePct: s.RainChance,
             TrackLength: s.TrackLength, TrackTurns: s.TrackTurns, TrackCity: s.TrackCity, TrackCountry: s.TrackCountry)
-        { TrackWetness = Math.Max(0, I(d.TrackWetness)) };
+        { TrackWetness = Math.Max(0, I(d.TrackWetness)),
+          SessionTimeTotal = d.SessionTimeTotal == null ? 0 : Dbl(d.SessionTimeTotal) };
+        double Dbl(IRacingSdkDatum x) { try { return data.GetDouble(x); } catch { try { return data.GetFloat(x); } catch { return 0; } } }
     }
 
     /// <summary>iRacing writes coordinates like "47.949722 m" - take the leading (signed) number.</summary>
@@ -1564,6 +1570,7 @@ public sealed partial class RaceStateService : IDisposable
         public IRacingSdkDatum? LapDeltaToBestLapOk = Opt(d, "LapDeltaToBestLap_OK");
         public IRacingSdkDatum? SessionTimeD       = Opt(d, "SessionTime");
         public IRacingSdkDatum? CarIdxF2Time       = Opt(d, "CarIdxF2Time");
+        public IRacingSdkDatum? SessionTimeTotal   = Opt(d, "SessionTimeTotal");
         public IRacingSdkDatum? CarIdxEstTime      = Opt(d, "CarIdxEstTime");
         static IRacingSdkDatum? Opt(IRacingSdkData d, string n) => d.TelemetryDataProperties.TryGetValue(n, out var x) ? x : null;
 

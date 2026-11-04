@@ -40,6 +40,8 @@ public static class PitLaneMap
 public sealed class PitBattleCard
 {
     public const float W = 1060f, H = 236f;
+    /// <summary>#716: the solo pit stop board (no rival on pit road): one row, no "out first" line.</summary>
+    public const float SoloH = 178f;
     static readonly SKColor Board = new(10, 10, 12, 236), Orange = new(0xFF, 0x7A, 0x1A), Ivory = new(0xF4, 0xF1, 0xE8),
         Dim = new(0xC4, 0xC9, 0xD2),   // #340 legibility: was 9AA0AC
         Blue = new(0x4D, 0x9F, 0xFF), Lane = new(255, 255, 255, 28), Green = new(0x5C, 0xE6, 0x8E);
@@ -85,12 +87,15 @@ public sealed class PitBattleCard
         if (rival != null) Track(rival, nowMs);
     }
 
-    public void Draw(SKCanvas c, float cx, float bottom, RaceSnapshot snap, Driver me, Driver rival, int battlePos, double nowMs, float alpha)
+    /// <summary>#716 (2026-10-31, Angelo: "in the pit lane during a racing pit stop can it push the driver card out and put
+    /// in the pit lane tracker ... the orange and black one"): rival null = the solo PIT STOP board.</summary>
+    public void Draw(SKCanvas c, float cx, float bottom, RaceSnapshot snap, Driver me, Driver? rival, int battlePos, double nowMs, float alpha)
     {
         if (alpha <= 0.01f) return;
         if (shownSinceMs < 0) shownSinceMs = nowMs;
         byte A(float v) => (byte)Math.Clamp(v * 255f * alpha, 0, 255);
-        var r = new SKRect(cx - W / 2f, bottom - H, cx + W / 2f, bottom);
+        bool solo = rival == null;
+        var r = new SKRect(cx - W / 2f, bottom - (solo ? SoloH : H), cx + W / 2f, bottom);
         float open = Math.Clamp((float)((nowMs - shownSinceMs) / 380.0), 0f, 1f); open = open * open * (3 - 2 * open);
         c.Save();
         c.ClipRect(new SKRect(r.MidX - r.Width / 2f * open, r.Top - 4, r.MidX + r.Width / 2f * open, r.Bottom + 4));
@@ -99,9 +104,9 @@ public sealed class PitBattleCard
         var band = new SKRect(r.Left, r.Top, r.Right, r.Top + 44f);
         fill.Color = Orange.WithAlpha(A(1)); c.Save(); c.ClipRoundRect(new SKRoundRect(r, 6f, 6f)); c.DrawRect(band, fill); c.Restore();
         text.Typeface = Fonts.BarlowCondensed.Black; text.TextSize = 30f; text.Color = new SKColor(12, 12, 12, A(1)); text.TextAlign = SKTextAlign.Left;
-        TextTracked.Draw(c, text, "PIT LANE BATTLE" + (battlePos > 0 ? $"  ·  P{battlePos}" : ""), band.Left + 26f, band.MidY + 11f, 2.4f);
+        TextTracked.Draw(c, text, solo ? "PIT STOP" : "PIT LANE BATTLE" + (battlePos > 0 ? $"  ·  P{battlePos}" : ""), band.Left + 26f, band.MidY + 11f, 2.4f);
         text.Typeface = Fonts.BarlowCondensed.Bold; text.TextSize = 18f; text.TextAlign = SKTextAlign.Right;
-        TextTracked.Draw(c, text, "WHO'S OUT FIRST?", band.Right - 26f, band.MidY + 7f, 1.6f);
+        TextTracked.Draw(c, text, solo ? "LIVE FROM PIT LANE" : "WHO'S OUT FIRST?", band.Right - 26f, band.MidY + 7f, 1.6f);
         text.TextAlign = SKTextAlign.Left;
 
         // the lane strip: ENTRY ---- [BOX] ---- EXIT, both cars on it
@@ -129,7 +134,8 @@ public sealed class PitBattleCard
             text.Color = (mine ? SKColors.White : new SKColor(10, 10, 12)).WithAlpha(A(1));
             TextTracked.Draw(c, text, num, x, ly + 4.5f, 0f);
         }
-        Dot(rival, false); Dot(me, true);
+        if (rival != null) Dot(rival, false);
+        Dot(me, true);
 
         // the two rows
         float ry = ly + 44f;
@@ -159,6 +165,7 @@ public sealed class PitBattleCard
             TextTracked.Draw(c, text, "PIT LANE", r.Right - 34f, y - 22f + 4f, 1.2f);
             text.TextAlign = SKTextAlign.Left;
         }
+        if (rival == null) { Row(me, true, ry + 6f); c.Restore(); return; }
         // the car further along the lane goes on top
         bool meFirst = (me.IsInPit ? PitLaneMap.Along(me.LapDistPct) : 1f) >= (rival.IsInPit ? PitLaneMap.Along(rival.LapDistPct) : 1f);
         Row(meFirst ? me : rival, meFirst, ry); Row(meFirst ? rival : me, !meFirst, ry + 40f);

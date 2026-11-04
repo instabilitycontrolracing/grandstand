@@ -579,7 +579,48 @@ public sealed partial class StoryCards : IDisposable
     readonly Dictionary<string, SKBitmap?> bmps = new(StringComparer.OrdinalIgnoreCase);
     readonly WatchRenderer watch = new();
 
+    /// <summary>#711 (2026-10-31, Angelo: "the compact mode cards cutoff names frequently when they are long ... just play
+    /// the full size cards unless radio is playing ... then possibly return to the full size card"): a regular card draws
+    /// the full-size (classic) card while no team radio is on screen, and the compact right-third card (split around the
+    /// radio card) while one is; it cross-fades between the two. The special partner cards (GO FAST, Michelin) keep their
+    /// own tall column.</summary>
+    public static bool FullWhenFree = true;
+    const double FullDebounceMs = 300, FullFadeMs = 380;
+    bool fullRaw, fullWant;
+    double fullRawSinceMs, fullLin = 1, fullLastMs = double.NaN, fullCardMs = double.NaN;
+    readonly SKPaint fullLayer = new();
+
+    float FullTick(double nowMs)
+    {
+        bool radio = RadioOn;
+        if (radio != fullRaw) { fullRaw = radio; fullRawSinceMs = nowMs; }
+        if (StoryDirector.StartedMs != fullCardMs)
+        {
+            fullCardMs = StoryDirector.StartedMs;              // a card that starts during a radio call starts compact
+            fullWant = !radio; fullLin = fullWant ? 1 : 0; fullLastMs = nowMs;
+        }
+        else if (fullRaw == fullWant && nowMs - fullRawSinceMs >= FullDebounceMs) fullWant = !fullRaw;
+        double dt = double.IsNaN(fullLastMs) ? 0 : Math.Clamp(nowMs - fullLastMs, 0, 100);
+        fullLastMs = nowMs;
+        fullLin = Math.Clamp(fullLin + (fullWant ? dt : -dt) / FullFadeMs, 0, 1);
+        return Smooth((float)fullLin);
+    }
+
     public void Draw(SKCanvas c, float w, float h, RaceSnapshot snap, double nowMs)
+    {
+        var kind = StoryDirector.Current;
+        if (kind == StoryKind.None || snap.Player == null) return;
+        if (Layout == CardLayout.Classic || !FullWhenFree || IsSpecial(kind)) { DrawInner(c, w, h, snap, nowMs, false); return; }
+        float fk = FullTick(nowMs);
+        if (fk <= 0.001f) { DrawInner(c, w, h, snap, nowMs, false); return; }
+        if (fk >= 0.999f) { DrawInner(c, w, h, snap, nowMs, true); ShownLayout = CardLayout.Classic; return; }
+        fullLayer.Color = SKColors.White.WithAlpha((byte)(255 * (1 - fk)));
+        c.SaveLayer(fullLayer); DrawInner(c, w, h, snap, nowMs, false); c.Restore();
+        fullLayer.Color = SKColors.White.WithAlpha((byte)(255 * fk));
+        c.SaveLayer(fullLayer); DrawInner(c, w, h, snap, nowMs, true); c.Restore();
+    }
+
+    void DrawInner(SKCanvas c, float w, float h, RaceSnapshot snap, double nowMs, bool full)
     {
         var kind = StoryDirector.Current;
         if (kind == StoryKind.None || snap.Player == null) return;
@@ -588,7 +629,7 @@ public sealed partial class StoryCards : IDisposable
         float outK = tx > 0 ? Ease((float)(tx / (StoryDirector.ExitMs / 1000.0))) : 0;
         if (outK >= 0.999f) return;
         // 2026-10-27 (#349): the right-third layouts (StoryCardsColumn.cs); classic carries on below unchanged
-        if (Layout != CardLayout.Classic) { DrawColumn(c, w, h, snap, kind, t, outK); return; }
+        if (Layout != CardLayout.Classic && !full) { DrawColumn(c, w, h, snap, kind, t, outK); return; }
         var r = new SKRect(w / 2f + 20, 172, w - 36, h - 36);   // top leaves room for the LIVE tab under the session bar
         var cls = ClassOf(snap, snap.Player);
 
@@ -1287,12 +1328,18 @@ public sealed partial class StoryCards : IDisposable
         using (var stem = new SKPath())
         {
             float ex = (stemBR - stemTR) / (r.Bottom - box.Bottom);            // the right edge's slope
-            stem.MoveTo(stemL, box.Bottom - 40);
-            stem.LineTo(stemTR + R, box.Bottom - 40);
+            // #683: the outer side flows from the screen's side down into the stem in one smooth curve (no notch)
+            float sTop = box.Bottom - 40, sx = (stemBL - stemL) / (r.Bottom - sTop);
+            float y3 = box.Bottom + 90, x3 = stemL + sx * (y3 - sTop);
+            float un = MathF.Sqrt(sx * sx + 1), ux = sx / un, uy = 1 / un;
+            stem.MoveTo(box.Left, box.Bottom - 56);
+            stem.LineTo(stemTR + R, box.Bottom - 56);
             stem.LineTo(stemTR + R, box.Bottom);
             stem.QuadTo(stemTR, box.Bottom, stemTR + ex * R, box.Bottom + R);  // the elbow
             stem.LineTo(stemBR, r.Bottom);
             stem.LineTo(stemBL, r.Bottom);
+            stem.LineTo(x3, y3);
+            stem.CubicTo(x3 - ux * 50, y3 - uy * 50, box.Left, box.Bottom + 6, box.Left, box.Bottom - 56);
             stem.Close();
             using var u = tower.Op(stem, SKPathOp.Union);
             tower.Reset(); tower.AddPath(u);

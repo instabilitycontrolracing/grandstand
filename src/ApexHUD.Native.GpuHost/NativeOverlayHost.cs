@@ -355,6 +355,9 @@ internal sealed class NativeOverlayHost : IDisposable
 
     long frameCount;
     double costDraw, costFlush, costMax, costSinceMs; int costN;
+    // #680 (2026-10-31): the hitch happened OUTSIDE draw/flush (garbage collection), so the log also counts the gaps
+    // between frames and the full collections in each 10 s window
+    double gapLastMs = -1, gapMax; int gap25, gap50, gcGen2At = -1; TimeSpan gcPauseAt;
     /// <summary>Per-graphic cost breakdown for the frame-cost log line (set by Program to the compositor's).</summary>
     public static Func<string>? CostDetail;
 
@@ -383,6 +386,8 @@ internal sealed class NativeOverlayHost : IDisposable
         costDraw += (t1 - t0) * MsPerTick; costFlush += (t2 - t1) * MsPerTick; costN++;
         if (isMain) { try { IntroWatch.Frame(nowMs, (t1 - t0) * MsPerTick, (t2 - t1) * MsPerTick, OverlayCompositor.LastGridMs); } catch { } }
         costMax = Math.Max(costMax, (t2 - t0) * MsPerTick);
+        if (gapLastMs > 0) { double gap = nowMs - gapLastMs; if (gap > 25) gap25++; if (gap > 50) gap50++; if (gap > gapMax) gapMax = gap; }
+        gapLastMs = nowMs;
         if (!isMain && nowMs - costSinceMs > 10000)
         {
             if (costN > 30) Program.Log($"{logTag}frame cost: {costN} frames, draw {costDraw / costN:F1} ms + flush {costFlush / costN:F1} ms avg, worst {costMax:F0} ms, {curW}x{curH}");
@@ -392,7 +397,10 @@ internal sealed class NativeOverlayHost : IDisposable
         {
             string detail = "";
             try { detail = CostDetail?.Invoke() ?? ""; } catch { }
-            if (costN > 30) Program.Log($"frame cost: {costN} frames, draw {costDraw / costN:F1} ms + flush {costFlush / costN:F1} ms avg, worst {costMax:F0} ms, {curW}x{curH} | {detail}");
+            int g2 = GC.CollectionCount(2); var gp = GC.GetTotalPauseDuration();
+            string gaps = gcGen2At < 0 ? "" : $", gaps >25 ms {gap25} / >50 ms {gap50} (max {gapMax:F0}), full GCs {g2 - gcGen2At}, GC pause {(gp - gcPauseAt).TotalMilliseconds:F0} ms";
+            gcGen2At = g2; gcPauseAt = gp; gap25 = gap50 = 0; gapMax = 0;
+            if (costN > 30) Program.Log($"frame cost: {costN} frames, draw {costDraw / costN:F1} ms + flush {costFlush / costN:F1} ms avg, worst {costMax:F0} ms, {curW}x{curH}{gaps} | {detail}");
             if (costN > 30 && ApexHUD.Native.Overlays.Perf.ReportFrameCost((costDraw + costFlush) / costN))
                 Program.Log("performance: frames are heavy on this PC - light mode switched on automatically (30 fps, less decorative motion)");
             costDraw = costFlush = costMax = 0; costN = 0; costSinceMs = nowMs;

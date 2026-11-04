@@ -771,7 +771,9 @@ public sealed partial class PreRaceCards : IDisposable
             classNames.Add(ClassLogo.DisplayName(cl.Name));
             foreach (var d in cl.Drivers) { cars++; if (d.IRating > 0) irs.Add(d.IRating); }
         }
-        string length = s.TotalLaps > 0 ? $"{s.TotalLaps} LAPS" : Duration(s.SessionTimeRemaining);
+        // 2026-10-31: the scheduled length (SessionTimeTotal) - before the green the time left is not the race length
+        double total = s.Extras.SessionTimeTotal > 0 && s.Extras.SessionTimeTotal < 86400 * 2 ? s.Extras.SessionTimeTotal : s.SessionTimeRemaining;
+        string length = s.TotalLaps > 0 ? $"{s.TotalLaps} LAPS" : Duration(total);
         float x = r.Left + 30;
         const float LS = 11, VS = 27, LY = 100, VY = 132;
         // ENTRANCE: the stats pop up one after another (and count up)

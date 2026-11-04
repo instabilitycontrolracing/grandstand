@@ -28,6 +28,9 @@ public static class VpLayout
     /// <summary>The battle map panel (top right) when it shows.</summary>
     public static SKRect BattleMap;
     public static bool BattleMapVisible;
+    /// <summary>2026-10-31: the regular-mode mini map (same spot as the battle map) when it shows.</summary>
+    public static SKRect CruiseMap = new(1596, 172, 1896, 402);
+    public static bool CruiseMapVisible;
     /// <summary>The timing tower lane (left).</summary>
     public static SKRect Tower = new(16, 18, 448, 1064);
     public static bool TowerVisible = true;
@@ -69,6 +72,13 @@ public static class VpLayout
 
     public static void Claim(int slot, SKRect r, double nowMs) { claims[slot] = r; claimAt[slot] = nowMs; }
     public static void Release(int slot) => claimAt[slot] = -1e12;
+    /// <summary>2026-10-31: does any of the pack's own cards (claimed in the last 250 ms) touch <paramref name="r"/>?</summary>
+    public static bool ClaimHits(SKRect r, double nowMs)
+    {
+        for (int i = 0; i < SlotCount; i++)
+            if (nowMs - claimAt[i] <= ClaimLifeMs && claims[i].Width > 0 && claims[i].IntersectsWith(r)) return true;
+        return false;
+    }
 
     /// <summary>Everything on screen right now, as rects (no allocation: fills <paramref name="dst"/>). <paramref name="self"/> = the
     /// asking card's own claim slot (left out), -1 = none.</summary>
@@ -86,6 +96,7 @@ public static class VpLayout
         if (TickerVisible) Add(dst, Ticker);
         if (RadioVisible) Add(dst, Radio);
         if (BattleMapVisible) Add(dst, BattleMap);
+        if (CruiseMapVisible) Add(dst, CruiseMap);
         if (BattleCardVisible) Add(dst, BattleCard);
         if (StoryVisible) Add(dst, Story);
         if (FeaturedVisible) Add(dst, Featured);

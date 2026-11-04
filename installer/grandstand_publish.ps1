@@ -1,4 +1,4 @@
-<#
+﻿<#
   Grandstand - build the beta release (run on the OWNER's PC, from the Grandstand git folder). beta (2026-10-24)
 
   1. dotnet publish (Release, win-x64, self-contained: testers need no .NET installed) into dist\Grandstand
@@ -43,15 +43,13 @@ $Personal = @(
     @{ Re = '^assets/transitions/frames/';                  Why = 'real IMSA broadcast footage (class-transition rollers) - the release draws its own animated transition' },
     @{ Re = '^assets/logos/sponsors/car_[^/]*_panel\.png$'; Why = 'press photographs of the cars - the release draws its own car panels' },
     @{ Re = '^assets/logos/sponsors/car_bmw_m_hybrid_v8\.png$'; Why = 'press photograph of a car - the release draws its own car panels' },
-    @{ Re = '^assets/logos/sponsors/ab_roof_';              Why = "the owner's own business (A&B) - the release ships neutral sponsor defaults" },
-    @{ Re = '^assets/logos/sponsors/storm_radar_';          Why = "the owner's partner (StormExhibit) - the release ships neutral sponsor defaults" },
-    @{ Re = '^assets/logos/sponsors/AB_GC_Logo\.png$';      Why = "the owner's own business logo - the release ships neutral sponsor defaults" },
+    # 2026-11-02 (Angelo): his own brands (A&B General Contracting, StormExhibit) ship in the public release's basic theme
     @{ Re = '^assets/logos/sponsors/gofast_logo\.png$';     Why = "the owner's personal sponsor - the release ships neutral sponsor defaults" },
     @{ Re = '^assets/logos/sponsors/tradingpaints_logo\.png$'; Why = "the owner's personal sponsor - the release ships neutral sponsor defaults" },
     @{ Re = '^assets/audio/';                               Why = 'sounds of unconfirmed origin - the release uses assets/audio_public (original, CC0)' },
     @{ Re = '^assets/(.*/)?_[^/]*/';                        Why = 'dev scratch folder (underscore-prefixed)' },
     @{ Re = '^assets/(.*/)?_[^/]*$';                        Why = 'dev scratch file (underscore-prefixed)' },
-    @{ Re = '^assets/logos/sponsors/(?!README\.txt$)[^/]+$'; Why = "sponsor folder is the owner's own partners - the release ships only the README (neutral defaults are drawn)" },
+    @{ Re = '^assets/logos/sponsors/(?!README\.txt$|ab_roof_|storm_radar_|AB_GC_Logo\.png$)[^/]+$'; Why = "sponsor folder is the owner's own partners - the release ships only the README (neutral defaults are drawn)" },
     @{ Re = '^assets/clock/dial\.png$';                     Why = "the owner's personal clock dial - the release uses the homage dials" },
     @{ Re = '^assets/fonts/(.*/)?RaycerRay';                Why = 'font without a confirmed licence - the outro falls back to Barlow Condensed (OFL)' },
     # 2026-10-28: Angelo - the car-maker, series, class, track and iRacing logos SHIP with Grandstand.
@@ -149,7 +147,7 @@ Step "Assets from $Assets"
 if (-not (Test-Path (Join-Path $Assets 'clock\homage_ivory.png'))) { Fail "No assets folder at $Assets (use -Assets)." }
 $robo = Join-Path $env:SystemRoot 'System32\robocopy.exe'
 $ErrorActionPreference = 'Continue'
-& $robo $Assets (Join-Path $app 'assets') /E /XF '*.psd' '*.ai' '*.xcf' '*.kra' '*.bak' '*.tmp' 'Thumbs.db' 'desktop.ini' 'car_*_panel.png' 'car_bmw_m_hybrid_v8.png' 'ab_roof_*' 'storm_radar_*' 'AB_GC_Logo.png' 'gofast_*' 'tradingpaints_*' '_*' 'RaycerRay*' 'sponsors.json' /XD '_*' 'backup' 'backups' (Join-Path $Assets 'transitions\frames') (Join-Path $Assets 'audio') 'corner_logos' 'michelin_run' /NFL /NDL /NJH /NJS /NP /R:2 /W:2
+& $robo $Assets (Join-Path $app 'assets') /E /XF '*.psd' '*.ai' '*.xcf' '*.kra' '*.bak' '*.tmp' 'Thumbs.db' 'desktop.ini' 'car_*_panel.png' 'car_bmw_m_hybrid_v8.png' 'gofast_*' 'tradingpaints_*' '_*' 'RaycerRay*' 'sponsors.json' /XD '_*' 'backup' 'backups' (Join-Path $Assets 'transitions\frames') (Join-Path $Assets 'audio') 'corner_logos' 'michelin_run' /NFL /NDL /NJH /NJS /NP /R:2 /W:2
 $code = $LASTEXITCODE
 $ErrorActionPreference = 'Stop'
 if ($code -ge 8) { Fail "copying the assets failed (robocopy code $code)" }

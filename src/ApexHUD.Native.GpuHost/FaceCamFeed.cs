@@ -20,6 +20,10 @@ internal static unsafe class FaceCamFeed
     public const string SenderName = "GSFaceCam";
     static readonly object gate = new();
     static byte[]? latest; static int latestW, latestH; static bool latestBgra; static long latestSeq;
+    // #680 (2026-10-31, the overlay's periodic hitch): a new 3.6 MB array 30 times a second landed on .NET's large-object
+    // heap and forced a full (gen-2) garbage collection about every 0.3 s - the render thread stalled each time (today's
+    // race opener: 115 gen-2 collections in 33 s, frames up to 130 ms). Now two buffers are made once and swapped.
+    static byte[]? back;
     static double lastFrameMs = -1e9;
     static readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
     static int started;
@@ -45,8 +49,15 @@ internal static unsafe class FaceCamFeed
             if (latestSeq != imageSeq)
             {
                 var info = new SKImageInfo(latestW, latestH, latestBgra ? SKColorType.Bgra8888 : SKColorType.Rgba8888, SKAlphaType.Opaque);
-                image?.Dispose();
-                image = SKImage.FromPixelCopy(info, latest, latestW * 4);
+                // #742 (2026-11-01, leaner): one copy straight into the picture (was: copy into a bitmap, then
+                // SKImage.FromBitmap copied the whole 3.6 MB again, every new camera frame). Skia's own memory, no
+                // .NET array per frame, so #680's garbage-collection fix still holds.
+                if (latest.Length >= info.BytesSize)
+                {
+                    SKImage? fresh;
+                    fixed (byte* src = latest) fresh = SKImage.FromPixelCopy(info, (IntPtr)src, info.RowBytes);
+                    if (fresh != null) { image?.Dispose(); image = fresh; }
+                }
                 imageSeq = latestSeq;
             }
         }
@@ -116,7 +127,7 @@ internal static unsafe class FaceCamFeed
                 if (mhr >= 0)
                 {
                     int ww = (int)curW, hh = (int)curH;
-                    var buf = new byte[ww * hh * 4];
+                    var buf = back != null && back.Length == ww * hh * 4 ? back : new byte[ww * hh * 4];   // #680: reused
                     fixed (byte* dst = buf)
                     {
                         for (int y = 0; y < hh; y++)
@@ -126,9 +137,10 @@ internal static unsafe class FaceCamFeed
                     // a frozen picture (OBS stopped rendering the source) reads the same bytes over and over: only count changes
                     bool changed;
                     lock (gate) { changed = latest == null || !Same(latest, buf); }
+                    if (!changed) back = buf;                     // #680: not shown - fill it again next time
                     if (changed)
                     {
-                        lock (gate) { latest = buf; latestW = ww; latestH = hh; latestBgra = curFmt != 28 && curFmt != 29; latestSeq++; }
+                        lock (gate) { back = latest; latest = buf; latestW = ww; latestH = hh; latestBgra = curFmt != 28 && curFmt != 29; latestSeq++; }
                         lastFrameMs = clock.Elapsed.TotalMilliseconds;
                         Status = $"receiving {ww}x{hh}";
                     }

@@ -1242,11 +1242,15 @@ public sealed partial class StoryCards
         k = k * k * (3 - 2 * k);
         var full = new SKRect(inner.Left - 14, inner.Top, inner.Right, inner.Bottom);
         using (var wp = new SKPaint { IsAntialias = true, Color = SKColors.White.WithAlpha((byte)(255 * k * a)) }) c.DrawRect(full, wp);
-        float pad = 34, sc = Math.Min((full.Width - 2 * pad) / logo.Width, (full.Height - 2 * pad) / logo.Height);
-        float lw = logo.Width * sc, lh = logo.Height * sc, grow = 0.94f + 0.06f * k;
+        // #689 (2026-10-31, Angelo: "take the top michelin man out and just leave the text michelin motion for life, that
+        // way there are not two michelin man at the same time"): only the part of his outro picture from the yellow line
+        // down (yellow line, MICHELIN, MOTION FOR LIFE) - the running man on the stem is the only Michelin Man at the close
+        var src = new SKRect(0, logo.Height * (286f / 500f), logo.Width, logo.Height);
+        float pad = 34, sc = Math.Min((full.Width - 2 * pad) / src.Width, (full.Height - 2 * pad) / src.Height);
+        float lw = src.Width * sc, lh = src.Height * sc, grow = 0.94f + 0.06f * k;
         lw *= grow; lh *= grow;
         using var lp = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.High, Color = SKColors.White.WithAlpha((byte)(255 * k * a)) };
-        c.DrawBitmap(logo, new SKRect(full.MidX - lw / 2, full.MidY - lh / 2, full.MidX + lw / 2, full.MidY + lh / 2), lp);
+        c.DrawBitmap(logo, src, new SKRect(full.MidX - lw / 2, full.MidY - lh / 2, full.MidX + lw / 2, full.MidY + lh / 2), lp);
     }
 
     /// <summary>PitTower's outline (same sums): the screen box and the leaning stem with its elbow, as one shape.</summary>
@@ -1259,7 +1263,15 @@ public sealed partial class StoryCards
         tower.AddRoundRect(box, 24, 24);
         using (var stem = new SKPath())
         {
-            stem.MoveTo(topL - Elbow, box.Bottom - 40); stem.LineTo(topR, box.Bottom - 40); stem.LineTo(botR, r.Bottom); stem.LineTo(botL, r.Bottom);
+            // #683 (2026-10-31, Angelo: "where the stem attaches to the body on the right side it needs to be a smoother
+            // corner ... more like the real tower"): the screen's right side now flows down into the stem's leaning outer
+            // edge in one smooth curve (was the box's rounded corner meeting the stem edge in a little notch)
+            float sTop = box.Bottom - 40, sx = (botR - topR) / (r.Bottom - sTop);
+            float y3 = box.Bottom + 90, x3 = topR + sx * (y3 - sTop);
+            float un = MathF.Sqrt(sx * sx + 1), ux = sx / un, uy = 1 / un;
+            stem.MoveTo(topL - Elbow, box.Bottom - 56); stem.LineTo(r.Right, box.Bottom - 56);
+            stem.CubicTo(r.Right, box.Bottom + 6, x3 - ux * 50, y3 - uy * 50, x3, y3);
+            stem.LineTo(botR, r.Bottom); stem.LineTo(botL, r.Bottom);
             float ex = (botL - topL) / (r.Bottom - box.Bottom);
             stem.LineTo(topL + ex * Elbow, box.Bottom + Elbow);
             stem.QuadTo(topL, box.Bottom, topL - Elbow, box.Bottom);   // the elbow
