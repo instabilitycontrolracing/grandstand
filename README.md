@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # GRANDSTAND
 
@@ -94,6 +94,8 @@ Text and lines stay razor sharp at every size. Nothing gets cut off, and you don
 
 ## Leagues, events and sponsors
 
+**Want your league broadcast?** I also produce league broadcasts with Grandstand and the replay director: your logo and sponsors on screen, the battles followed, every class winner shown. Email **[instabilitycontrol@gmail.com](mailto:instabilitycontrol@gmail.com?subject=EVENT)** with **EVENT** in the subject line.
+
 **Running a league or a special event?** I can make custom overlays for it: your logo, your colours, your series name on the openers, grid and results. I want to partner with leagues and events that make sim racing better.
 📧 Email **[instabilitycontrol@gmail.com](mailto:instabilitycontrol@gmail.com?subject=EVENT)** with **EVENT** in the subject line.
 
@@ -111,7 +113,7 @@ Partners and sponsors help keep Grandstand free. They never get anything that lo
 
 ## Getting it
 
-Beta builds will be on the [Releases](../../releases) page. You'll need Windows and iRacing.
+Download the latest beta from the [Releases](../../releases) page. You'll need Windows and iRacing.
 
 Building it yourself:
 
