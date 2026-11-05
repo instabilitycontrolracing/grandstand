@@ -139,6 +139,7 @@ internal sealed class OverlayCompositor : IDisposable
     readonly OutroRenderer outro = new();   // 2026-10-20: post-race outro (flag, podiums, results)   // 2026-10-19: half-screen race-story takeovers
     readonly LensRain lensRain = new();       // 2026-10-26 (#234): rain drops on the TV camera's lens
     readonly ReplayWipe replayWipe = new();   // 2026-10-26 (#235): REPLAY / LIVE wipe + corner REPLAY tag
+    readonly IRacingBug irBug = new();        // 2026-11-05 (#773): the iRacing logo, always on screen
     Entry? lensEntry, wipeEntry;
     readonly VisualPackDirector vp = new();       // 2026-10-27: the visual review pack (V1-V8, W8-W13), all off by default
     readonly Dictionary<string, Entry> vpEntries = new();
@@ -758,6 +759,19 @@ internal sealed class OverlayCompositor : IDisposable
         };
         entries.Add(wipeEntry);
 
+        // #773 (2026-11-05): the iRacing logo (Broadcast Policy) - drawn last, on top of everything, never hidden by
+        // onboards or replays; 25 % visible, top-right / bottom-right while the bar is full width (see IRacingBug)
+        entries.Add(new Entry
+        {
+            Name = "iracingbug",
+            Bounds = () => Grow(irBug.LastRect, 8f),
+            Visible = static () => true,
+            Animating = () => irBug.Animating,
+            Continuous = false,
+            OnsetMs = 0,
+            Paint = (c, snap, nowMs, w, h) => irBug.Draw(c, w, h, nowMs),
+        });
+
         // 2026-10-27: visual pack graphics. Lens effects sit with the lens rain (under every graphic); the cards go
         // under the replay wipe, the break card and the bumper on top of the cards.
         int lensAt = entries.IndexOf(lensEntry) + 1;
@@ -832,6 +846,7 @@ internal sealed class OverlayCompositor : IDisposable
             if (e.Name.StartsWith("vp_", StringComparison.Ordinal)) allowed &= VpAllowed(e.Name, s.Visuals);
             if (e.Name == "racecontrol") allowed &= s.RaceControlBar;            // #619
             if (e.Name == "viewerlatest") allowed &= s.Viewer.KeepLatest;        // #608
+            if (e.Name == "iracingbug") allowed = s.OnAir;                      // #773: required on air, Lean mode included
             if (s.Elements.TryGetValue(e.Name, out var es))
             {
                 allowed &= es.Enabled;
@@ -1043,7 +1058,7 @@ internal sealed class OverlayCompositor : IDisposable
             long pt0 = System.Diagnostics.Stopwatch.GetTimestamp();
             float obk = e.HideOnOnboard ? PresentationState.CardsHiddenK : 0f;
             // #423: everything but the replay wipe / REPLAY tag fades away while a replay plays
-            float rk = e.Name == "replaywipe" ? 0f : ReplayHideEased;
+            float rk = e.Name == "replaywipe" || e.Name == "iracingbug" ? 0f : ReplayHideEased;   // #773: the iRacing logo stays in replays
             float vis = (1 - obk) * (1 - rk);
             if (vis <= 0.005f) return;
             if (vis < 0.995f)

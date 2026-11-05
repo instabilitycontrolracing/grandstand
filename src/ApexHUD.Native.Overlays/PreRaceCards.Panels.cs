@@ -22,7 +22,8 @@ public sealed partial class PreRaceCards
     /// <summary>Whole screen in the card's coordinates. When set, pre-race cards draw as panels.</summary>
     public SKRect Screen;
 
-    const float PanelTop = 172f, PanelBottomPad = 40f, PanelSidePad = 48f, PanelGap = 40f;
+    // #773 (2026-11-05): bottom pad 40 -> 90 so the panels clear the iRacing logo in the bottom-right corner (24 px margin + 45 px logo + gap)
+    const float PanelTop = 172f, PanelBottomPad = 90f, PanelSidePad = 48f, PanelGap = 40f;
 
     SKRect PanelRect(int slot, out bool right)
     {
