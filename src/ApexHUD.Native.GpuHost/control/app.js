@@ -736,7 +736,7 @@
       <div class="panel" style="--accent: var(--green)"><h2>Free forever</h2><p class="muted">No paid tier, nothing locked. If Grandstand makes your races better, you can help keep it going. Donations unlock nothing.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn gold" style="display:inline-flex;align-items:center;text-decoration:none" href="https://ko-fi.com/instabilitycontrol" target="_blank" rel="noopener">Support on Ko-fi</a>
         <a class="btn" style="display:inline-flex;align-items:center;text-decoration:none;color:var(--ivory)" href="https://www.paypal.com/donate/?hosted_button_id=WMCFSMXNS8XYG" target="_blank" rel="noopener">Donate with PayPal</a>
-        <a class="btn" style="display:inline-flex;align-items:center;text-decoration:none;color:var(--ivory)" href="https://github.com/instabilitycontrol/grandstand/issues/new/choose" target="_blank" rel="noopener">Report a problem</a></div></div>
+        <a class="btn" style="display:inline-flex;align-items:center;text-decoration:none;color:var(--ivory)" href="https://github.com/instabilitycontrolracing/grandstand/issues/new/choose" target="_blank" rel="noopener">Report a problem</a></div></div>
     </div>`;
   function refreshPacks() { return api.get("/api/packs").then((r) => { packs = r.packs || []; if (screen === "settings") render(); }).catch(() => {}); }
   function afterPack(r, what) {

@@ -133,7 +133,7 @@ Because racing should be about who's fastest, not who paid the most. If you want
 
 ## Also from me
 
-**[Instability Control](https://github.com/instabilitycontrol/instability-control)** is a free race engineer, strategist and spotter for iRacing that talks to you on the radio.
+**[Instability Control](https://github.com/instabilitycontrolracing/instability-control)** is a free race engineer, strategist and spotter for iRacing that talks to you on the radio.
 
 ---
 
