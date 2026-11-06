@@ -115,6 +115,15 @@ Partners and sponsors help keep Grandstand free. They never get anything that lo
 
 Download the latest beta from the [Releases](../../releases) page. You'll need Windows and iRacing.
 
+**Trading Paints is required for some features.** Grandstand runs without it, but the real car liveries come from your Trading Paints files. Without [Trading Paints](https://www.tradingpaints.com) (free) running while you race, these show plain cars instead:
+
+- the cars in the battle box
+- the starting grid's front-row hero cards and the pre-race cards
+- the car pictures on story cards and the pit lane card
+- the car in the onboard view
+
+The installer checks for Trading Paints and tells you if it's missing.
+
 Building it yourself:
 
 ```

@@ -94,8 +94,8 @@ if (-not $NoShortcuts) {
     New-Shortcut (Join-Path $startMenu "$AppName.lnk") $exe '' $InstallDir $exe 'Grandstand - TV-style broadcast graphics for iRacing'
     New-Shortcut (Join-Path $desktop "$AppName.lnk")   $exe '' $InstallDir $exe 'Grandstand - TV-style broadcast graphics for iRacing'
     New-Shortcut (Join-Path $startMenu "Uninstall $AppName.lnk") $uninstCmd '' $env:TEMP '' "Remove $AppName"
-    # the control page Grandstand serves while it runs (ControlServer.Port = 8790)
-    [IO.File]::WriteAllText((Join-Path $startMenu 'Grandstand Control.url'), "[InternetShortcut]`r`nURL=http://127.0.0.1:8790/`r`n", [Text.Encoding]::ASCII)
+    # 2026-11-05: Grandstand opens its own app window now - the old browser shortcut to the control page is removed
+    Remove-Item (Join-Path $startMenu 'Grandstand Control.url') -Force -ErrorAction SilentlyContinue
     Ok 'Start Menu and Desktop shortcuts made'
 }
 try {
@@ -112,8 +112,30 @@ try {
     Ok 'listed in Settings > Apps'
 } catch { Warn "Couldn't add the Apps & features entry: $($_.Exception.Message)" }
 
+# 4. Trading Paints (2026-11-05): needed for the real car liveries on the graphics - Grandstand runs without it
+Step 'Trading Paints (needed for some features)'
+$tp = $null
+try {
+    $tp = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+          Where-Object { $_.PSObject.Properties['DisplayName'] -and "$($_.DisplayName)" -match 'Trading Paints' } | Select-Object -First 1
+} catch { }
+$tpNeeds = @(
+    'the real car liveries in the battle box',
+    'the starting grid''s front-row hero cards and the pre-race cards',
+    'the car pictures on story cards and the pit lane card',
+    'the car in the onboard view'
+)
+if ($tp) {
+    Ok 'Trading Paints is installed - real car liveries will show on the graphics'
+} else {
+    Warn 'Trading Paints is NOT installed. Grandstand works without it, but these show plain cars instead of real liveries:'
+    foreach ($n in $tpNeeds) { Write-Host "          - $n" -ForegroundColor Yellow; Write-Log "      needs Trading Paints: $n" }
+    Write-Host '          Get it free at https://www.tradingpaints.com and keep it running while you race.' -ForegroundColor Yellow
+    if (-not $Yes -and (Ask-YesNo '  Open the Trading Paints download page now?' $false)) { Start-Process 'https://www.tradingpaints.com/install' }
+}
+
 Write-Host ''
 Write-Host "  All done. Start '$AppName' from the Desktop or the Start Menu." -ForegroundColor Green
-Write-Host '  While it runs, the control page is at http://127.0.0.1:8790/ ("Grandstand Control" in the Start Menu).'
+Write-Host '  It opens in its own window. To control it from another screen or a tablet, open http://127.0.0.1:8790/ there.'
 Write-Log '===== install finished ====='
 exit 0
