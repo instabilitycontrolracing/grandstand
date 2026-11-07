@@ -159,7 +159,9 @@ public sealed partial class StoryCards
         };
         float bandX = bounds.Left - 30 + (bounds.Width + 60) * outK;
         c.Save();
-        if (outK > 0) c.ClipRect(new SKRect(bandX, 0, w + 10, h + 10));
+        // 2026-11-06 (#913, Angelo): the pit stop tower itself slides off screen - no coloured wipe
+        if (outK > 0 && kind == StoryKind.PitStops) c.Translate((w + 80 - bounds.Left) * outK * outK, 0);
+        else if (outK > 0) c.ClipRect(new SKRect(bandX, 0, w + 10, h + 10));
         double impact = ImpactAt(kind), ti = impact >= 0 ? t - impact : -1;
         if (ti > 0 && ti < 0.4)   // camera kick as the card lands, as the classic card
         {
@@ -206,7 +208,7 @@ public sealed partial class StoryCards
             }
         }
         c.Restore();
-        if (outK > 0 && outK < 1)
+        if (outK > 0 && outK < 1 && kind != StoryKind.PitStops)
         {
             float bw = 26;
             using (var trail = SKShader.CreateLinearGradient(new SKPoint(bandX - 220, 0), new SKPoint(bandX, 0), new[] { wipeCol.WithAlpha(0), wipeCol.WithAlpha(120) }, null, SKShaderTileMode.Clamp))

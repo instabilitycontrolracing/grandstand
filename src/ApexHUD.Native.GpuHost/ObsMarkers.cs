@@ -69,13 +69,20 @@ internal static class ObsMarkers
     public static Task<ReelResult> ResumeRecordAsync() => Reel("resume", "");
     /// <summary>A chapter in the running recording (OBS 30.2+, Hybrid MP4); quietly nothing on older OBS.</summary>
     public static Task<ReelResult> ChapterAsync(string name) => Reel("chapter", name);
+    /// <summary>2026-11-06 (vertical clips): makes sure OBS's Replay Buffer is switched on in its settings, holds at least
+    /// <paramref name="seconds"/>, and is running. Ok + WasRecording=true when it was already running (it has the past).</summary>
+    public static Task<ReelResult> EnsureReplayBufferAsync(int seconds) => Reel("rbensure", seconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    /// <summary>2026-11-06 (vertical clips): saves the Replay Buffer; OutputPath = the saved file.</summary>
+    public static Task<ReelResult> SaveReplayAsync() => Reel("rbsave", "");
+    /// <summary>Asked for by the vertical clips (keeps the 2 s status poll going while they want the buffer).</summary>
+    public static volatile bool WantStatus;
 
     static async Task<ReelResult> Reel(string kind, string chapter)
     {
         Start();
         var tcs = new TaskCompletionSource<ReelResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         if (!queue.Writer.TryWrite(new ReelReq(kind, chapter, tcs))) return new ReelResult(false, false, "", "OBS queue closed");
-        var done = await Task.WhenAny(tcs.Task, Task.Delay(8000));
+        var done = await Task.WhenAny(tcs.Task, Task.Delay(kind == "rbsave" ? 15000 : 8000));   // saving waits for OBS to write the file
         return done == tcs.Task ? tcs.Task.Result : new ReelResult(false, false, "", "OBS didn't answer in time");
     }
     static void FailReel(object item, string why) { if (item is ReelReq r) r.Done.TrySetResult(new ReelResult(false, false, "", why)); }
@@ -91,7 +98,7 @@ internal static class ObsMarkers
             {
                 await Task.Delay(2000);
                 var c = ControlState.Current;
-                if (c.ObsDirector || c.HighlightsObs) queue.Writer.TryWrite(new StatusReq());
+                if (c.ObsDirector || c.HighlightsObs || WantStatus) queue.Writer.TryWrite(new StatusReq());
             }
         });
     }
@@ -195,6 +202,45 @@ internal static class ObsMarkers
                         string outPath = r is { } q && q.TryGetProperty("outputPath", out var op) ? op.GetString() ?? "" : "";
                         rr.Done.TrySetResult(new ReelResult(r != null, false, outPath, r != null ? "" : "OBS didn't stop the recording"));
                         Program.Log("obs: recording stopped" + (outPath.Length > 0 ? " - " + outPath : ""));
+                    }
+                    else if (rr.Kind == "rbensure")
+                    {
+                        var st1 = await Request(ws, buf, "GetReplayBufferStatus", null, ++reqId);
+                        bool running = st1 is { } q1 && q1.TryGetProperty("outputActive", out var a1) && a1.ValueKind == JsonValueKind.True;
+                        if (running) { rr.Done.TrySetResult(new ReelResult(true, true, "", "")); continue; }
+                        // not running: switch the buffer on in OBS's output settings with enough seconds, then start it
+                        int want = int.TryParse(rr.Chapter, out var w0) ? w0 : 45;
+                        var mode = await Request(ws, buf, "GetProfileParameter", new { parameterCategory = "Output", parameterName = "Mode" }, ++reqId);
+                        string m0 = mode is { } mm && mm.TryGetProperty("parameterValue", out var mv) ? mv.GetString() ?? "Simple" : "Simple";
+                        string cat = m0.Equals("Advanced", StringComparison.OrdinalIgnoreCase) ? "AdvOut" : "SimpleOutput";
+                        await Request(ws, buf, "SetProfileParameter", new { parameterCategory = cat, parameterName = "RecRB", parameterValue = "true" }, ++reqId);
+                        var len = await Request(ws, buf, "GetProfileParameter", new { parameterCategory = cat, parameterName = "RecRBTime" }, ++reqId);
+                        int have = len is { } ll && ll.TryGetProperty("parameterValue", out var lv) && int.TryParse(lv.GetString(), out var hv) ? hv : 0;
+                        if (have < want)
+                        {
+                            await Request(ws, buf, "SetProfileParameter", new { parameterCategory = cat, parameterName = "RecRBTime", parameterValue = want.ToString(System.Globalization.CultureInfo.InvariantCulture) }, ++reqId);
+                            Program.Log($"obs: replay buffer length {have} -> {want} s ({cat})");
+                        }
+                        bool on = (await RequestFull(ws, buf, "StartReplayBuffer", null, ++reqId)).Ok;
+                        rr.Done.TrySetResult(new ReelResult(on, false, "", on ? "" : "OBS wouldn't start its Replay Buffer (check Settings > Output > Replay Buffer in OBS)"));
+                        Program.Log(on ? "obs: replay buffer started (for vertical clips)" : "obs: OBS wouldn't start the replay buffer");
+                    }
+                    else if (rr.Kind == "rbsave")
+                    {
+                        var before = await Request(ws, buf, "GetLastReplayBufferReplay", null, ++reqId);
+                        string prev = before is { } b0 && b0.TryGetProperty("savedReplayPath", out var p0) ? p0.GetString() ?? "" : "";
+                        bool ok = (await RequestFull(ws, buf, "SaveReplayBuffer", null, ++reqId)).Ok;
+                        if (!ok) { rr.Done.TrySetResult(new ReelResult(false, false, "", "OBS's Replay Buffer isn't running")); continue; }
+                        string got = "";
+                        for (int i = 0; i < 24 && got.Length == 0; i++)   // OBS writes the file, then reports it (up to ~6 s)
+                        {
+                            await Task.Delay(250);
+                            var after = await Request(ws, buf, "GetLastReplayBufferReplay", null, ++reqId);
+                            string p1 = after is { } b1 && b1.TryGetProperty("savedReplayPath", out var pp) ? pp.GetString() ?? "" : "";
+                            if (p1.Length > 0 && p1 != prev) got = p1;
+                        }
+                        rr.Done.TrySetResult(new ReelResult(got.Length > 0, false, got, got.Length > 0 ? "" : "OBS saved the replay but didn't say where"));
+                        Program.Log("obs: replay saved" + (got.Length > 0 ? " - " + got : " (no path)"));
                     }
                     else if (rr.Kind is "pause" or "resume")
                     {

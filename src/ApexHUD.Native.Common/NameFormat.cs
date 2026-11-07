@@ -47,6 +47,10 @@ public static class NameFormat
         if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
         var s = raw.Trim();
 
+        // 2026-11-06 (Angelo: "P. OLIVEIRA12" on the onboard ahead card): iRacing adds digits to duplicate
+        // names ("Pedro Oliveira12" / "Oliveira12, P") - drop digits stuck to the end of a name word.
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=\p{L})\d+(?=\s*(,|$))", "").Trim();
+
         // Strip a legacy roster prefix like "GTP-Smith, Joe" → "Smith, Joe".
         int dash = s.IndexOf('-');
         if (dash > 1 && dash <= 5 && IsAllUpper(s.AsSpan(0, dash)))

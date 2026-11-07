@@ -45,6 +45,7 @@ public sealed class RaceControlBar : IDisposable
         public float[] Sizes = Array.Empty<float>();
         public double Hold;
         public bool Spoken;
+        public bool IRacing;   // #939: the iRacing-coloured headline style
         public string Raw = "";
         public float TagW, CarW, DriverSize, DriverW, RightW;
     }
@@ -78,6 +79,60 @@ public sealed class RaceControlBar : IDisposable
         m.Kind = Classify(string.Join(' ', m.Texts));
         m.Tag = TagOf(m.Kind);
         incoming.Enqueue(m);
+    }
+
+    /// <summary>#939: the short headline of a spoken race-control line ("QUALIFYING OPEN"), in iRacing's colours - the
+    /// spoken words themselves play on the radio card.</summary>
+    public static void PushSummary(string spoken)
+    {
+        if (string.IsNullOrWhiteSpace(spoken)) return;
+        string plain = string.Join(' ', (ParseCues(spoken.Trim(), out double end)?.Select(q => q.Text)) ?? new[] { spoken.Trim() });
+        string head = Headline(plain);
+        if (head.Length == 0) return;
+        if (incoming.Count > 6) incoming.TryDequeue(out _);
+        var kind = Classify(plain);
+        var m = new Msg
+        {
+            Spoken = false, IRacing = true, Raw = head, Kind = kind, Tag = kind == RcBarKind.Info ? "" : TagOf(kind),
+            Texts = new[] { head }, At = new[] { 0.0 },
+            Hold = Math.Clamp(end > 0 ? end + 700 : 6000, 5000, 15000),   // up as long as he talks (the radio card's length)
+        };
+        incoming.Enqueue(m);
+    }
+
+    /// <summary>#939: a few words for the session bar drop-down from what race control said.</summary>
+    public static string Headline(string text)
+    {
+        string t = text.ToLowerInvariant();
+        bool Has(params string[] w) => w.Any(x => t.Contains(x));
+        if (Has("black flag", "disqualif")) return "BLACK FLAG";
+        if (Has("drive through", "drive-through")) return "DRIVE THROUGH PENALTY";
+        if (Has("stop and go", "stop-go", "stop & go")) return "STOP AND GO PENALTY";
+        if (Has("penalt")) return "PENALTY";
+        if (Has("chequered", "checkered")) return "CHEQUERED FLAG";
+        if (Has("white flag", "final lap", "last lap")) return "FINAL LAP";
+        if (Has("full course yellow", "full-course yellow")) return "FULL COURSE YELLOW";
+        if (Has("safety car", "pace car")) return "SAFETY CAR";
+        if (Has("green flag", "green, green", "race is on", "race has started")) return "GREEN FLAG";
+        if (Has("formation lap", "pace lap")) return "FORMATION LAP";
+        if (Has("to the grid", "grid for")) return "TO THE GRID";
+        if (Has("qualifying") && Has("start", "open", "under way", "underway", "begun")) return "QUALIFYING OPEN";
+        if (Has("qualifying") && Has("end", "over", "closed", "finish", "complete")) return "QUALIFYING OVER";
+        if (Has("practice") && Has("start", "open", "under way", "underway", "begun")) return "PRACTICE OPEN";
+        if (Has("practice") && Has("end", "over", "closed", "finish", "complete")) return "PRACTICE OVER";
+        if (Has("pit exit") && Has("closed", "close")) return "PIT EXIT CLOSED";
+        if (Has("pit exit") && Has("open")) return "PIT EXIT OPEN";
+        if (Has("pit lane") && Has("closed")) return "PIT LANE CLOSED";
+        if (Has("pit lane") && Has("open")) return "PIT LANE OPEN";
+        if (Has("track limit")) return "TRACK LIMITS MONITORED";
+        if (Has("blue flag")) return "BLUE FLAG";
+        if (Has("yellow")) return "YELLOW FLAG";
+        if (Has("investigat")) return "UNDER INVESTIGATION";
+        if (Has("session") && Has("end", "over", "complete")) return "SESSION OVER";
+        // anything else: the first sentence, upper case, kept short
+        string first = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+        first = first.ToUpperInvariant();
+        return first.Length > 38 ? first[..38].TrimEnd() + "…" : first;
     }
 
     /// <summary>A W12 decision (render thread, from the visual pack): the car, its tag and the incident points.</summary>
@@ -204,8 +259,8 @@ public sealed class RaceControlBar : IDisposable
     void Prepare(Msg m)
     {
         if (labelW <= 0) labelW = TextBlobs.TrackedWidth(Label, labelP, LabelTrack);
-        m.TagW = TextBlobs.TrackedWidth(m.Tag, tagP, TagTrack) + 18f;
-        float x = Pad + labelW + 14f + m.TagW + 16f;
+        m.TagW = m.Tag.Length == 0 ? 0f : TextBlobs.TrackedWidth(m.Tag, tagP, TagTrack) + 18f;
+        float x = Pad + labelW + 14f + (m.TagW > 0 ? m.TagW + 16f : 6f);
         if (m.Car.Length > 0)
         {
             m.CarW = Math.Max(30f, TextBlobs.Measure(m.Car, carP) + 14f);
@@ -288,12 +343,16 @@ public sealed class RaceControlBar : IDisposable
         shaded.Color = new SKColor(0, 0, 0, A(1f));
         c.DrawRect(new SKRect(0, H, w, H + 10f), shaded);
         // glass: the session bar's deep glass, a touch darker towards the bottom
-        shaded.Shader = glassSh.Linear(new SKPoint(0, 0), new SKPoint(0, H), [new SKColor(14, 20, 34, 230), new SKColor(8, 12, 22, 236)], default);
+        // #939: a race-control headline wears iRacing's colours (the splash / intro palette): navy into iRacing blue
+        if (cur.IRacing)
+            shaded.Shader = glassSh.Linear(new SKPoint(0, 0), new SKPoint(w, 0), [new SKColor(0x16, 0x3A, 0x8E, 240), new SKColor(0x0B, 0x1E, 0x52, 240), new SKColor(0x07, 0x10, 0x2A, 236)], default);
+        else
+            shaded.Shader = glassSh.Linear(new SKPoint(0, 0), new SKPoint(0, H), [new SKColor(14, 20, 34, 230), new SKColor(8, 12, 22, 236)], default);
         c.DrawRect(new SKRect(0, 0, w, H), shaded);
         shaded.Shader = null;
-        Theme.Skin(c, new SKRect(0, 0, w, H), ThemeSurface.Popup, nowMs, a);   // #601: the broadcast theme (nothing on Default)
-        // the kind's colour: a strip at the left edge and a soft wash from it
-        var acc = AccentOf(cur.Kind);
+        if (!cur.IRacing) Theme.Skin(c, new SKRect(0, 0, w, H), ThemeSurface.Popup, nowMs, a);   // #601: the broadcast theme (nothing on Default)
+        // the kind's colour: a strip at the left edge and a soft wash from it (iRacing red on a headline)
+        var acc = cur.IRacing && cur.Kind == RcBarKind.Info ? new SKColor(0xD3, 0x16, 0x2C) : AccentOf(cur.Kind);
         var wash = cur.Kind == RcBarKind.BlackFlag ? Vp.Ivory : acc;
         shaded.Shader = glowSh.Linear(new SKPoint(0, 0), new SKPoint(220f, 0), [wash.WithAlpha(46), wash.WithAlpha(0)], default);
         shaded.Color = new SKColor(0, 0, 0, A(1f));
@@ -307,7 +366,7 @@ public sealed class RaceControlBar : IDisposable
             c.DrawRect(new SKRect(5f, 0, 6.2f, H), fill);
         }
         // the session bar's bottom hairline (gold, fading at both ends), on this bar's bottom edge
-        var gold = Theme.AccentOr(new SKColor(0xC5, 0xA5, 0x72), ThemeSurface.Popup);
+        var gold = cur.IRacing ? new SKColor(0xD3, 0x16, 0x2C) : Theme.AccentOr(new SKColor(0xC5, 0xA5, 0x72), ThemeSurface.Popup);
         shaded.Shader = hairSh.Linear(new SKPoint(0, 0), new SKPoint(w, 0),
             [gold.WithAlpha(0), gold.WithAlpha(150), gold.WithAlpha(150), gold.WithAlpha(0)], StopsHair);
         c.DrawRect(new SKRect(0, H - 1f, w, H), shaded);
@@ -320,10 +379,11 @@ public sealed class RaceControlBar : IDisposable
         labelP.Color = Vp.Ivory.WithAlpha(A(0.92f * ta / Math.Max(a, 0.001f)));
         TextBlobs.DrawTracked(c, Label, x, by, LabelTrack, labelP);
         x += labelW + 14f;
-        // the tag pill
+        // the tag pill (none on a plain headline)
         var pill = new SKRect(x, by - 13.5f, x + cur.TagW, by + 5.5f);
         float tk = ta / Math.Max(a, 0.001f);
-        if (cur.Kind == RcBarKind.Info)
+        if (cur.TagW <= 0) { }
+        else if (cur.Kind == RcBarKind.Info)
         {
             stroke.Color = acc.WithAlpha(A(tk)); c.DrawRoundRect(pill, 3f, 3f, stroke);
             tagP.Color = new SKColor(0x9F, 0xB6, 0xFF, A(tk));
@@ -340,8 +400,9 @@ public sealed class RaceControlBar : IDisposable
             bool dark = acc.Red + acc.Green + acc.Blue > 450;
             tagP.Color = (dark ? new SKColor(10, 12, 16) : SKColors.White).WithAlpha(A(tk));
         }
-        TextBlobs.DrawTracked(c, cur.Tag, x + 9f, by, TagTrack, tagP);
-        x += cur.TagW + 16f;
+        if (cur.TagW > 0) { TextBlobs.DrawTracked(c, cur.Tag, x + 9f, by, TagTrack, tagP); x += cur.TagW + 16f; }
+        else x += 6f;
+        if (cur.IRacing) { msgP.Typeface = Fonts.Inter.Bold; } else msgP.Typeface = Fonts.Inter.SemiBold;
         // the car: number chip, class line, driver
         if (cur.Car.Length > 0)
         {

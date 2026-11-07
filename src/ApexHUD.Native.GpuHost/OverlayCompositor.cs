@@ -45,6 +45,10 @@ internal sealed class OverlayCompositor : IDisposable
     {
         /// <summary>Fades away while an onboard shot is on air (the full-screen onboard owns the bottom of the screen).</summary>
         public bool HideOnOnboard;
+        // 2026-11-05 (card editor): see-through amount and the card's own picture (CardPictures.cs)
+        public float Op = 1f;
+        public bool AllowedIfOnAir;   // 2026-11-05: the live view shows the show even while ON AIR is off
+        public SKImage? Img; public string ImgFile = ""; public bool ImgBadge; public float ImgOp;
         public int ProfSlot = -2;
         public required string Name;
         public required Func<bool> Visible;
@@ -128,7 +132,12 @@ internal sealed class OverlayCompositor : IDisposable
     readonly ViewerCardsRenderer viewerCards = new();   // 2026-10-29 (#494): Super Chat / tips / members, track fund
     readonly RaceControlBar rcBar = new();               // 2026-10-30 (#619): race control as a bar under the session bar
     readonly ViewerLatestPlate latestPlate = new();      // 2026-10-30 (#608): the latest viewer message, kept up
-    Entry? latestEntry, rcEntry;
+    Entry? latestEntry, rcEntry, betEntry;
+    readonly BetCardRenderer betCard = new();   // 2026-11-06: viewer bets
+    readonly DeskCardRenderer deskCard = new(); // 2026-11-06: producer desk cards (table / head to head / gap graph)
+    readonly NameTagRenderer nameTag = new();
+    readonly CamCarChip camChip = new();   // 2026-11-06: who the camera is on (number, driver, class position, car)   // 2026-11-06: producer name tags / driver focus / driver change
+    Entry? deskEntry, tagEntry;
     bool latestWanted; double latestForceUntilMs = -1, lastCamCollectMs = -1e9;
     readonly SKRect[] camRects = new SKRect[40];         // #611: the graphics on screen, for the cam placer (no allocation)
     string themePick = "default"; bool themeByDate; double lastThemeCheckMs = -1e9;
@@ -140,12 +149,14 @@ internal sealed class OverlayCompositor : IDisposable
     readonly LensRain lensRain = new();       // 2026-10-26 (#234): rain drops on the TV camera's lens
     readonly ReplayWipe replayWipe = new();   // 2026-10-26 (#235): REPLAY / LIVE wipe + corner REPLAY tag
     readonly IRacingBug irBug = new();        // 2026-11-05 (#773): the iRacing logo, always on screen
+    TelemetryWidgets telemetry = null!;       // 2026-11-05 (#778): custom telemetry widgets
     Entry? lensEntry, wipeEntry;
     readonly VisualPackDirector vp = new();       // 2026-10-27: the visual review pack (V1-V8, W8-W13), all off by default
     readonly Dictionary<string, Entry> vpEntries = new();
     readonly Func<string, double> readVar;
     readonly List<Entry> entries = new();
     readonly Entry towerEntry;       // captured for the splash-occlusion skip
+    const float BattleTowerTop = 166f;   // #941: under the battle-mode session bar + standings ticker (ticker ends ~154)
     Entry? battleEntry;
 
     // Control app state (2026-10-23)
@@ -153,6 +164,8 @@ internal sealed class OverlayCompositor : IDisposable
     double controlBoostUntilMs = -1;
 
     RaceSnapshot currentSnap = RaceSnapshot.Disconnected;
+    /// <summary>The snapshot the graphics are drawing (live, or the sample race) - for the control app's data picker.</summary>
+    public RaceSnapshot CurrentSnapshot => currentSnap;
     ulong lastSig;
     bool sigInit;
     double lastChangeAtMs = -1e9;
@@ -225,8 +238,13 @@ internal sealed class OverlayCompositor : IDisposable
                 // Top inset 18 (matches the session-bar top edge); bottom held at
                 // h-16 (aligned with the featured card), so height = h-34.
                 float availableHeight = h - 34f;
+                // #941: in a two-car battle the full-width session bar + standings ticker hang from the top (to y 154) -
+                // the tower starts under them
+                float towerTop = PresentationState.IsBattleActive ? BattleTowerTop : 18f;
+                if (towerTop > 18f) availableHeight = h - towerTop - 16f;
+                VpLayout.Tower = new SKRect(16, towerTop, 448, 1064);
                 // #644 (Angelo 10-31): the tower always keeps its full length - the face cam sits over its bottom
-                tower.Draw(c, 16f, 18f, availableHeight, snap, nowMs);
+                tower.Draw(c, 16f, towerTop, availableHeight, snap, nowMs);
                 // 2026-10-30 (class transitions choppy): the next built-in roller's still parts, drawn ahead in the background
                 if (!SceneDirector.SplashActive) splash.Prepare(c, 16f, 18f, 400f, h - 34f, snap);   // the splash still covers the whole lane (cam included)
             },
@@ -237,6 +255,7 @@ internal sealed class OverlayCompositor : IDisposable
         // the names) and BEFORE the splash and every other graphic (the transitions play over it). It never moves: its bottom
         // edge is the tower's bottom edge, and the tower keeps its full length. Picture: OBS's "GSFaceCam" Spout sender.
         FaceCamFeed.Start();
+        CrewChiefFeed.Start();   // #777: idle (a 1 s sleep loop) unless "CrewChief on the radio card" is on
         entries.Add(new Entry
         {
             Name = "facecam",
@@ -279,7 +298,7 @@ internal sealed class OverlayCompositor : IDisposable
             Cacheable = true,
             Paint = (c, snap, nowMs, w, h) =>
             {
-                float left = (w - 768f) / 2f;
+                float left = (w - (FeaturedCardRenderer.CardWidth + 48f)) / 2f;   // #942: the card is wider (car column)
                 // Move the card straight down so its visible glass bottom lines
                 // up with the timing tower's bottom edge. Tower bottom = 16 px
                 // top inset + (h-32) height = h-16. The card's glass bottom sits
@@ -347,7 +366,7 @@ internal sealed class OverlayCompositor : IDisposable
             Name = "battle",
             Bounds = static () => Grow(VpLayout.BattleCard, 260f),
             HideOnOnboard = true,
-            Visible = static () => true,
+            Visible = static () => !PresentationState.TowerPulse,   // #873
             Animating = () => battle.IsActive,
             Continuous = false,
             Paint = (c, snap, nowMs, w, h) =>
@@ -395,7 +414,8 @@ internal sealed class OverlayCompositor : IDisposable
                 // left or right corner below the session bar"): the battle map has its own fixed spot, top-right under
                 // the session bar and ticker. Away while a story card is up or during an onboard shot (the onboard's
                 // gap readout lives up there).
-                bool mapShow = battle.IsActive && !(snap.Player is { IsInPit: true }) && battleSlide < 0.5f && PresentationState.OnboardK < 0.5f;
+                // 2026-11-06: + steps aside while a producer card (top right, up to ~400 tall) is on screen
+                bool mapShow = battle.IsActive && !(snap.Player is { IsInPit: true }) && battleSlide < 0.5f && PresentationState.OnboardK < 0.5f && !deskCard.Active;
                 battleMap.Draw(c, w - 24f - BattleMap.W, 172f, snap, battle.BattleCars, mapShow, nowMs);
                 VpLayout.BattleMapVisible = mapShow;
                 VpLayout.BattleMap = new SKRect(w - 24f - BattleMap.W, 172f, w - 24f, 172f + BattleMap.H);
@@ -676,6 +696,65 @@ internal sealed class OverlayCompositor : IDisposable
         };
         entries.Add(latestEntry);
 
+        // 2026-11-06: the viewer-bet card, top right under the latest-message plate (Bets.cs runs the bets)
+        betEntry = new Entry
+        {
+            Name = "bets",
+            HideOnOnboard = true,
+            Bounds = () => betCard.LastRect.IsEmpty ? SKRect.Empty : Grow(betCard.LastRect, 24f),
+            Visible = () => betCard.Active,
+            Animating = () => betCard.NeedsFrames(currentNowMs),
+            Continuous = false,
+            OnsetMs = 400,
+            Paint = (c, snap, nowMs, w, h) =>
+            {
+                // 2026-11-06 (Live view check): below the latest-message plate and the battle map when they are up
+                float top = BetCardRenderer.Top;
+                if (latestPlate.Active) top = Math.Max(top, ViewerLatestPlate.RectFor(VpLayout.SessionBar).Bottom + 10f);
+                if (VpLayout.BattleMapVisible) top = Math.Max(top, VpLayout.BattleMap.Bottom + 12f);
+                betCard.WantTop = top;
+                betCard.Draw(c, nowMs);
+            },
+        };
+        entries.Add(betEntry);
+
+        // 2026-11-06: the producer desk's on-demand graphics (ProducerDesk.cs puts them on DeskBoard)
+        deskEntry = new Entry
+        {
+            Name = "desk",
+            HideOnOnboard = true,
+            Bounds = () => deskCard.LastRect.IsEmpty ? SKRect.Empty : Grow(deskCard.LastRect, 30f),
+            Visible = () => deskCard.Active,
+            Animating = () => deskCard.Fading || DeskBoard.CardWanted,
+            Continuous = false,
+            OnsetMs = 400,
+            Paint = (c, snap, nowMs, w, h) => deskCard.Draw(c, nowMs),
+        };
+        entries.Add(deskEntry);
+        tagEntry = new Entry
+        {
+            Name = "nametag",
+            HideOnOnboard = true,
+            Bounds = () => nameTag.LastRect.IsEmpty ? SKRect.Empty : Grow(nameTag.LastRect, 30f),
+            Visible = () => nameTag.Active,
+            Animating = () => nameTag.Fading || DeskBoard.TagWanted,
+            Continuous = false,
+            OnsetMs = 400,
+            Paint = (c, snap, nowMs, w, h) => nameTag.Draw(c, nowMs),
+        };
+        entries.Add(tagEntry);
+        entries.Add(new Entry
+        {
+            Name = "camcar",
+            HideOnOnboard = true,
+            Bounds = () => camChip.LastRect.IsEmpty ? SKRect.Empty : Grow(camChip.LastRect, 20f),
+            Visible = () => camChip.Active,
+            Animating = () => camChip.Fading,
+            Continuous = false,
+            OnsetMs = 300,
+            Paint = (c, snap, nowMs, w, h) => camChip.Draw(c),
+        });
+
         // Session bar + Rolex watch - full-width top strip. Drawn LAST so the
         // watch overhang composites on top of the ticker beneath it. The watch
         // sweeps continuously => Continuous, so the canvas does not idle while
@@ -745,6 +824,19 @@ internal sealed class OverlayCompositor : IDisposable
             Paint = (c, snap, nowMs, w, h) => lensRain.Draw(c),
         };
         entries.Insert(0, lensEntry);
+
+        // #778 (2026-11-05): the user's own telemetry widgets (Documents\iRacing\Grandstand\telemetry_widgets.json), only while
+        // the control page's "Telemetry widgets" switch is on
+        telemetry = new TelemetryWidgets(raceState);
+        entries.Add(new Entry
+        {
+            Name = "telemetry",
+            HideOnOnboard = false,
+            Visible = static () => ControlState.Current.TelemetryWidgets,
+            Continuous = true,
+            OnsetMs = 0,
+            Paint = (c, snap, nowMs, w, h) => telemetry.Draw(c, snap, nowMs),
+        });
 
         // 2026-10-26 (#235): the replay / live wipe covers everything, so it is drawn last; the small corner REPLAY tag
         // is static (it repaints with the rest, no presents of its own once faded in).
@@ -846,14 +938,25 @@ internal sealed class OverlayCompositor : IDisposable
             if (e.Name.StartsWith("vp_", StringComparison.Ordinal)) allowed &= VpAllowed(e.Name, s.Visuals);
             if (e.Name == "racecontrol") allowed &= s.RaceControlBar;            // #619
             if (e.Name == "viewerlatest") allowed &= s.Viewer.KeepLatest;        // #608
-            if (e.Name == "iracingbug") allowed = s.OnAir;                      // #773: required on air, Lean mode included
+            if (e.Name == "iracingbug") allowed = s.OnAir && !ApexHUD.Native.Common.ReplayState.IsReplay;   // 2026-11-06 Angelo: iRacing draws its own logo in replays, so ours steps aside                      // #773: required on air, Lean mode included
             if (s.Elements.TryGetValue(e.Name, out var es))
             {
                 allowed &= es.Enabled;
                 e.Ox = es.X; e.Oy = es.Y; e.Sc = es.Scale;
+                e.Op = float.IsFinite(es.Opacity) ? Math.Clamp(es.Opacity, 0.1f, 1f) : 1f;
+                string file = es.Image ?? "";
+                if (file != e.ImgFile)
+                {
+                    e.Img?.Dispose(); e.Img = file.Length > 0 ? CardPictures.Load(file) : null; e.ImgFile = file;
+                    if (file.Length > 0) Program.Log($"card picture: {e.Name} <- {file}" + (e.Img == null ? " (couldn't read it)" : ""));
+                }
+                e.ImgBadge = es.ImageMode == "badge";
+                e.ImgOp = float.IsFinite(es.ImageOpacity) ? Math.Clamp(es.ImageOpacity, 0f, 1f) : 0.3f;
             }
-            else { e.Ox = 0; e.Oy = 0; e.Sc = 1f; }
+            else { e.Ox = 0; e.Oy = 0; e.Sc = 1f; e.Op = 1f; if (e.Img != null) { e.Img.Dispose(); e.Img = null; } e.ImgFile = ""; }
             e.Allowed = allowed;
+            // 2026-11-05 (live view): what WOULD be on air with ON AIR pressed - the live view still shows the show while off air
+            e.AllowedIfOnAir = s.OnAir ? allowed : AllowedWithOnAir(e, s);
             e.Cache?.Dispose(); e.Cache = null;
         }
         var vs = s.Visuals;
@@ -914,6 +1017,7 @@ internal sealed class OverlayCompositor : IDisposable
         while (ControlState.Requests.TryDequeue(out var r))
         {
             if (r == "outro") OutroDirector.Force(snap, nowMs);
+            else if (r == "storyclear") StoryDirector.Dismiss(nowMs);   // 2026-11-06: a Live view button clears the way
             else if (r.StartsWith("vp:", StringComparison.Ordinal)) Program.Log("visual pack test " + r[3..] + ": " + vp.Test(r[3..], snap, nowMs));
             else if (r.StartsWith("custom:", StringComparison.Ordinal)) CustomCards.Requests.Enqueue(r["custom:".Length..]);
             else if (r == "latestplate") { ViewerLatest.Sample(); latestForceUntilMs = nowMs + 9000; Program.Log("latest plate test (9 s)"); }   // #608
@@ -940,7 +1044,7 @@ internal sealed class OverlayCompositor : IDisposable
         if (!PresentationState.TowerVisible || PresentationState.OnboardK > 0.02f || PresentationState.ReplayHideK > 0.02f) return false;
         if (OutroDirector.FullScreen || ViewerTierRenderer.FullScreen || SceneDirector.SplashActive) return false;
         if (StoryDirector.Visible || StoryDirector.MiniVisible || CustomCards.Visible || viewerCards.Visible) return false;
-        if (viewerTiers.Visible || rcBar.IsActive(nowMs) || latestPlate.Active) return false;
+        if (viewerTiers.Visible || rcBar.IsActive(nowMs) || latestPlate.Active || betCard.Active || deskCard.Active) return false;   // 2026-11-06: + the bet / desk cards
         var r = new SKRect(VpLayout.CruiseMap.Left - 12f, VpLayout.CruiseMap.Top - 12f, VpLayout.CruiseMap.Right + 12f, VpLayout.CruiseMap.Bottom + 12f);
         if (VpLayout.RadioVisible && VpLayout.Radio.IntersectsWith(r)) return false;
         if (VpLayout.ClaimHits(r, nowMs)) return false;                 // a visual-pack card (weather, yellow map...) came in
@@ -1019,7 +1123,7 @@ internal sealed class OverlayCompositor : IDisposable
         // the visual pack's cards (race control card, yellow map, weather, strategy ...) say where they are
         n += VpLayout.Claims(d.AsSpan(n), nowMs);
         // #619 the race-control bar (or where it is about to come down), #608 the latest plate (up or about to fade in)
-        if (rcEntry is { Allowed: true })
+        if (rcEntry is { Allowed: true } || rcEntry is { AllowedIfOnAir: true })
         {
             if (!rcBar.LastRect.IsEmpty) Add(rcBar.LastRect);
             else if (RaceControlBar.Waiting && !rcBar.NextRect.IsEmpty) Add(rcBar.NextRect);
@@ -1056,10 +1160,10 @@ internal sealed class OverlayCompositor : IDisposable
                 if (e.Sc != 1f) { canvas.Translate(a.X, a.Y); canvas.Scale(e.Sc); canvas.Translate(-a.X, -a.Y); }
             }
             long pt0 = System.Diagnostics.Stopwatch.GetTimestamp();
-            float obk = e.HideOnOnboard ? PresentationState.CardsHiddenK : 0f;
+            float obk = e.HideOnOnboard && !(e.Name == "nametag" && ApexHUD.Native.Overlays.DeskBoard.IsReplayTagShown) ? PresentationState.CardsHiddenK : 0f;
             // #423: everything but the replay wipe / REPLAY tag fades away while a replay plays
-            float rk = e.Name == "replaywipe" || e.Name == "iracingbug" ? 0f : ReplayHideEased;   // #773: the iRacing logo stays in replays
-            float vis = (1 - obk) * (1 - rk);
+            float rk = e.Name == "replaywipe" || e.Name == "iracingbug" || (e.Name == "nametag" && ApexHUD.Native.Overlays.DeskBoard.IsReplayTagShown) || e.Name == "camcar" ? 0f : ReplayHideEased;   // #773: the iRacing logo stays in replays
+            float vis = (1 - obk) * (1 - rk) * e.Op;   // e.Op: the card editor's see-through setting (2026-11-05)
             if (vis <= 0.005f) return;
             if (vis < 0.995f)
             {
@@ -1067,7 +1171,14 @@ internal sealed class OverlayCompositor : IDisposable
                 var b = e.Bounds?.Invoke() ?? SKRect.Empty;
                 if (b.IsEmpty) canvas.SaveLayer(obLayer); else canvas.SaveLayer(b, obLayer);   // just the graphic, not 4K
             }
-            e.Paint(canvas, snap, nowMs, width, height);
+            // 2026-11-05: the card's own picture (card editor) - across the card behind the glass, or a corner badge
+            var img = e.Img;
+            if (img != null && CardPictures.TryRect(e.Name, out var pr))
+            {
+                if (e.ImgBadge) { e.Paint(canvas, snap, nowMs, width, height); CardPictures.DrawBadge(canvas, img, pr, e.ImgOp); }
+                else { int gl = CardPictures.BeginGlass(canvas, pr); e.Paint(canvas, snap, nowMs, width, height); CardPictures.EndGlass(canvas, img, pr, e.ImgOp, gl); }
+            }
+            else e.Paint(canvas, snap, nowMs, width, height);
             double paintMs = (System.Diagnostics.Stopwatch.GetTimestamp() - pt0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             e.CostMs += paintMs;
             if (e.Name == "grid") LastGridMs = paintMs;
@@ -1147,8 +1258,92 @@ internal sealed class OverlayCompositor : IDisposable
 
     RaceSnapshot? cannedCache;
 
+    // ---- 2026-11-05: SAMPLE RACE for the Live view (Angelo: story cards, the pre-race show etc. must play without iRacing) ----
+    // While the Live view is open (it asks for frames) and iRacing ISN'T running, the race logic runs on the sample race:
+    // directors, story cards, the pre-race opener, the outro - exactly as in a real session. The overlay window stays
+    // hidden (Program shows it only for a live sim), nothing is written to the highlight log and OBS is left alone.
+    // A real session always wins: the moment iRacing connects, the sample stops.
+    public static volatile string SampleStage = "race";   // "prerace" | "race" | "finish"
+    public static long SampleUntilTicks;                    // kept alive by the Live view's frame requests
+    public static volatile int SampleRun;                   // bumped by "play again": a fresh session for every director
+    static bool SampleWanted => Environment.TickCount64 < Interlocked.Read(ref SampleUntilTicks);
+    bool sampleActive; RaceSnapshot? sampleSnap; string sampleSnapKey = "";
+    public static volatile bool SampleRunning;
+    public static volatile bool SampleSound = true;   // the Live view's sound switch: only ever applies while the sample race runs
+
+    // 2026-11-06: each Grandstand start gets its own sample-race ids - with the same ids after a restart, the opener's
+    // "already played for this race" memory skipped the whole pre-race show (and its music) in the Live view
+    static readonly string SampleBoot = Environment.TickCount64.ToString("x", System.Globalization.CultureInfo.InvariantCulture);
+    string sampleGlobeWaitKey = ""; long sampleGlobeWaitSince = long.MaxValue / 2;
+    RaceSnapshot SampleSnapshot()
+    {
+        string key = SampleStage + ":" + SampleRun + ":" + SampleBoot;
+        if (sampleSnap != null && key == sampleSnapKey) return sampleSnap;
+        if (SampleStage != "prerace") { try { OpenerAudio.Stop(); } catch { } }   // the opener music stops when you leave the pre-race show
+        // 2026-11-06 (Angelo: "forgot the globe in the sample pre race intro"): the sample track needs its place on the map
+        // (Watkins Glen) for the globe, and the pre-race show waits (up to 12 s) until the globe is built, else it opens without it
+        var b = CannedSnapshot.Build();
+        if (double.IsNaN(b.TrackLatitude)) b = b with { TrackLatitude = 42.3369, TrackLongitude = -76.9272 };
+        // (Angelo: "the track intro has the Watkins Glen logo in the wrong place ... and no turn by turn breakdown"): the
+        // sample used an old track name and no layout - iRacing's real ones are needed for the recorded track map (Boot)
+        // and the corner list (CrewChief's landmarks), plus the length the corner walk is measured in
+        if (b.TrackConfigName.Length == 0)
+            b = b with
+            {
+                TrackRawName = "watkinsglen 2021 fullcourse", TrackConfigName = "Boot",
+                Extras = b.Extras with { TrackLength = "5.43 km", TrackTurns = 11, TrackCity = "Watkins Glen", TrackCountry = "USA" },
+            };
+        if (SampleStage == "prerace" && !GlobeIntro.Ready(b) && Environment.TickCount64 - sampleGlobeWaitSince < 12_000)
+        {
+            if (sampleGlobeWaitKey != key) { sampleGlobeWaitKey = key; sampleGlobeWaitSince = Environment.TickCount64; }
+            GlobeIntro.Prepare(b);
+            int waitNum = 900 + (SampleRun % 90) * 3;
+            return b with { Phase = RacePhase.PreRace, SessionState = 1, SessionNum = waitNum, SessionKey = "sample-wait-" + key };   // grid not live yet: no opener
+        }
+        sampleSnapKey = key;
+        // "you" in the sample race (story cards, your-race graphics need a player): the BMW if there is one, else a mid-pack car
+        if (b.Player == null)
+        {
+            var all = b.ClassLeaderboard.SelectMany(cl => cl.Drivers).ToList();
+            var me = all.FirstOrDefault(d => (d.CarBrand + " " + d.CarName).Contains("BMW", StringComparison.OrdinalIgnoreCase))
+                     ?? (all.Count > 3 ? all[3] : all.FirstOrDefault());
+            if (me != null) b = b with { Player = me, PlayerCarIdx = me.CarIdx };
+        }
+        int num = 900 + (SampleRun % 90) * 3 + (SampleStage == "prerace" ? 0 : SampleStage == "race" ? 1 : 2);
+        sampleSnap = SampleStage switch
+        {
+            "prerace" => b with { Phase = RacePhase.PreRace, SessionState = 3, SessionNum = num, SessionKey = "sample-" + key },
+            "finish" => b with { Phase = RacePhase.PostRace, SessionState = 5, SessionNum = num, SessionKey = "sample-" + key },
+            _ => b with { SessionNum = num, SessionKey = "sample-" + key },
+        };
+        Program.Log("sample race: " + SampleStage + " (run " + SampleRun + ")");
+        return sampleSnap;
+    }
+
     RaceSnapshot Resolve()
     {
+        bool want = !demo && !raceState.Current.IsConnected && SampleWanted;
+        if (want != sampleActive)
+        {
+            sampleActive = want; SampleRunning = want;
+            if (!want)
+            {
+                // leaving the sample: nothing it made may leak into a real race
+                try { RaceDiary.Reset(); } catch { }
+                try { OpenerAudio.Stop(); } catch { }
+                sampleSnap = null; sampleSnapKey = "";
+                Program.Log("sample race: stopped");
+            }
+        }
+        if (sampleActive)
+        {
+            // sound for the sample race follows the Live view's switch; a real session always gets it back (below)
+            StartingGridRenderer.OpenerAudioEnabled = SampleSound; StorySound.Enabled = false; OpenerAudio.Silent = true;   // 2026-11-06: sample sound plays inside the app window (LiveSound), Grandstand's own sound goes to the TV
+            if (!SampleSound) { try { OpenerAudio.Stop(); } catch { } }
+            return SampleSnapshot();
+        }
+        if (OpenerAudio.Silent) OpenerAudio.Silent = false;
+        if (!StartingGridRenderer.OpenerAudioEnabled || !StorySound.Enabled) { StartingGridRenderer.OpenerAudioEnabled = true; StorySound.Enabled = true; }
         if (!demo && !raceState.Current.IsConnected)
             return RaceSnapshot.Disconnected;   // never put the canned demo field on air in a real session
         if (demo)
@@ -1235,6 +1430,12 @@ internal sealed class OverlayCompositor : IDisposable
         try { CustomCards.Tick(snap, nowMs, StoryDirector.Visible || StoryDirector.MiniVisible || OutroDirector.FullScreen); }
         catch (Exception ex) { if (nowMs - lastCustomFailMs > 10000) { lastCustomFailMs = nowMs; Program.Log("custom cards: " + ex.Message); } }
         GlobeIntro.Prepare(snap);   // build this track's globe in the background long before the opener
+        if (CardPreview.Take() is { } previewId)   // 2026-11-05: the card editor's preview / the live view
+        {
+            if (previewId.StartsWith("frame:", StringComparison.Ordinal)) ServeFrame(snap, nowMs, int.TryParse(previewId[6..], out int fw) ? fw : 1280);
+            else if (previewId.StartsWith("watch:", StringComparison.Ordinal)) ServeWatch(int.TryParse(previewId[6..], out int ws) ? ws : 160);
+            else ServePreview(previewId, snap, nowMs);
+        }
 
         ulong sig = Signature(snap);
         if (!sigInit || sig != lastSig)
@@ -1304,6 +1505,13 @@ internal sealed class OverlayCompositor : IDisposable
         float uiScale = height > 1300 ? height / 1080f : 1f;
         LastGridMs = 0;
         Theme.Clock = nowMs;   // #601: the clock for themed glass helpers that have no time of their own
+        // the globe's dress rehearsal, one offscreen frame per present, in the quiet minute before the opener.
+        // 2026-11-06 (#900/#924, Angelo: "the globe flashes before the intro"): it used to run AFTER the frame was drawn,
+        // which left the rehearsal's offscreen picture as the last thing the graphics card worked on - the Spout feed
+        // (OBS) then sent ~0.8 s of the rehearsal globe. Proven with OBS pictures 0.2 s apart (globe exactly while the
+        // log says "globe rehearsal"). Now it runs first, so the real frame is always the last thing drawn.
+        try { IntroWatch.Rehearse(currentSnap, (int)Math.Round(width / uiScale), (int)Math.Round(height / uiScale), uiScale, width, height); }
+        catch (Exception ex) { Program.Log("globe rehearsal: " + ex.Message); }
         if (uiScale == 1f) RenderCore(canvas, width, height, nowMs);
         else
         {
@@ -1312,9 +1520,6 @@ internal sealed class OverlayCompositor : IDisposable
             RenderCore(canvas, (int)Math.Round(width / uiScale), (int)Math.Round(height / uiScale), nowMs);
             canvas.RestoreToCount(save);
         }
-        // the globe's dress rehearsal, one offscreen frame per present, in the quiet minute before the opener
-        try { IntroWatch.Rehearse(currentSnap, (int)Math.Round(width / uiScale), (int)Math.Round(height / uiScale), uiScale, width, height); }
-        catch (Exception ex) { Program.Log("globe rehearsal: " + ex.Message); }
     }
 
     readonly SKPaint obLayer = new();
@@ -1347,7 +1552,7 @@ internal sealed class OverlayCompositor : IDisposable
             lastCamCollectMs = nowMs;
             try
             {
-                if (ControlState.Current.Cams.KeepClear)
+                if (ControlState.Current.Cams.KeepClear && !sampleActive)   // the sample race never moves OBS cams
                 {
                     long c0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     int n = CollectCamRects(snap, nowMs);
@@ -1358,9 +1563,9 @@ internal sealed class OverlayCompositor : IDisposable
             catch (Exception ex) { if (nowMs - lastVpFailMs > 10000) { lastVpFailMs = nowMs; Program.Log("cams: " + ex.Message); } }
         }
         // 2026-10-28 (#487): highlight markers (start / finish / your passes / pit stops; renderers add their own)
-        try { HighlightLog.Enabled = ControlState.Current.Highlights; HighlightLog.Note(snap, PresentationState.IsBattleActive); } catch { }
+        if (!sampleActive) try { HighlightLog.Enabled = ControlState.Current.Highlights; HighlightLog.Note(snap, PresentationState.IsBattleActive); } catch { }   // never log the sample race
         // 2026-10-28 (#488): the OBS scene that fits what's on screen (the cams move out of the graphics' way)
-        try { ObsMarkers.WantScene(ObsSceneFor(snap), (long)nowMs); } catch { }
+        if (!sampleActive) try { ObsMarkers.WantScene(ObsSceneFor(snap), (long)nowMs); } catch { }   // OBS is left alone by the sample race
         // 2026-10-27: visual pack (decides what plays and feeds it; allocation-free between events)
         try
         {
@@ -1405,15 +1610,47 @@ internal sealed class OverlayCompositor : IDisposable
             VpLayout.OnboardVisible = PresentationState.OnboardActive && PresentationState.IsRacing && PresentationState.OnboardK > 0.02f;
             PresentationState.BumperBattleStyle = vp.Bumper.Active(nowMs) && PresentationState.IsRacing;
             // #619 / #608: the race-control bar and the latest plate (the cards and the cam placer keep clear of them)
-            bool rcAllowed = rcEntry is { Allowed: true, Broken: false };
+            // 2026-11-06: AllowedIfOnAir too, so the Live view (always off air in the sample race) shows race control
+            bool rcAllowed = rcEntry is { Broken: false } && (rcEntry.Allowed || rcEntry.AllowedIfOnAir);
             if (!rcAllowed && (RaceControlBar.Waiting || rcBar.IsActive(nowMs))) rcBar.Reset();   // off air / Lean: dropped, not saved up
             bool rcUp = rcAllowed && (rcBar.IsActive(nowMs) || RaceControlBar.Waiting);
             RaceControlBar.Up = rcUp;
             VpLayout.RcBar = rcBar.LastRect; VpLayout.RcBarVisible = rcUp && !rcBar.LastRect.IsEmpty;
             bool viewerBusy = viewerCards.Current != null || viewerTiers.Current != null || ViewerTierRenderer.FullScreen;
             bool clear = ViewerCardsRenderer.ScreenClear(snap, out _, false) && !SceneDirector.SplashActive && !OutroDirector.FullScreen;
-            latestWanted = latestEntry is { Allowed: true, Broken: false } && ViewerFeed.Enabled && !viewerBusy && (clear || nowMs < latestForceUntilMs);
+            // 2026-11-06: the Latest message button (latestForceUntilMs) shows it off air and with viewer cards switched off too
+            bool forcedLatest = nowMs < latestForceUntilMs;
+            latestWanted = latestEntry is { Broken: false } && (latestEntry.Allowed || latestEntry.AllowedIfOnAir) && (ViewerFeed.Enabled || forcedLatest) && !viewerBusy && (clear || forcedLatest);
             latestPlate.Tick(latestWanted, nowMs);
+            // 2026-11-06: the bet card waits while a story card / own card / the finish / a full-screen moment has the right side
+            // (AllowedIfOnAir: the Live view shows it while ON AIR is off; the overlay itself still won't paint an un-allowed entry)
+            bool betWanted = betEntry is { Broken: false } && (betEntry.Allowed || betEntry.AllowedIfOnAir) && !deskCard.Active && !StoryDirector.Visible && !CustomCards.Visible && !OutroDirector.FullScreen
+                && !SceneDirector.SplashActive && !ViewerTierRenderer.FullScreen;
+            betCard.Tick(betWanted, nowMs);
+            // 2026-11-06: producer cards wait for story / own cards and the finish; name tags for the finish and full-screen moments
+            bool deskWanted = deskEntry is { Broken: false } && (deskEntry.Allowed || deskEntry.AllowedIfOnAir) && !StoryDirector.Visible && !CustomCards.Visible && !PresentationState.CloseFight
+                && !OutroDirector.FullScreen && !SceneDirector.SplashActive && !ViewerTierRenderer.FullScreen;
+            deskCard.Tick(deskWanted, nowMs);
+            bool tagWanted = tagEntry is { Broken: false } && (tagEntry.Allowed || tagEntry.AllowedIfOnAir) && !OutroDirector.FullScreen && !SceneDirector.SplashActive && !PresentationState.CloseFight
+                && !ViewerTierRenderer.FullScreen && !PresentationState.IsBattleActive && !VpLayout.BattleCardVisible && !PresentationState.PitStopShowing
+                && !battle.IsActive;
+            nameTag.Tick(tagWanted || (ApexHUD.Native.Overlays.DeskBoard.ReplayTag && tagEntry is { Broken: false } && !OutroDirector.FullScreen), nowMs);
+            // 2026-11-06: the camera car's plate, unless another graphic already names it
+            var camCar = snap.CameraTarget;
+            bool chipWanted = false && camCar != null   /* 2026-11-06 (#891): plate OFF - it got in the way */ && !camCar.IsPaceCar && snap.IsConnected && !nameTag.Active && !DeskBoard.TagUp
+                && !PresentationState.FeaturedVisible && !PresentationState.IsBattleActive && !VpLayout.BattleCardVisible && !battle.IsActive
+                && !StoryDirector.Visible && !OutroDirector.FullScreen && !SceneDirector.SplashActive && !ViewerTierRenderer.FullScreen;
+            // never on top of anything: any other graphic on screen in the plate's spot keeps it away
+            if (chipWanted)
+                foreach (var oe in entries)
+                {
+                    if (oe.Name == "camcar" || oe.Name == "iracingbug") continue;
+                    SKRect obr;
+                    try { if (!oe.Visible()) continue; obr = oe.Bounds(); } catch { continue; }
+                    if (obr.IsEmpty || obr.Width * obr.Height > 1920f * 1080f * 0.5f) continue;   // full-screen washes don't count
+                    if (obr.IntersectsWith(CamCarChip.Zone)) { chipWanted = false; break; }
+                }
+            camChip.Tick(camCar, chipWanted, nowMs);
             VpLayout.LatestPlate = ViewerLatestPlate.RectFor(VpLayout.SessionBar); VpLayout.LatestPlateVisible = latestPlate.Active;
         }
         catch (Exception ex) { if (nowMs - lastVpFailMs > 10000) { lastVpFailMs = nowMs; Program.Log("visual pack: " + ex.Message); } }
@@ -1667,7 +1904,7 @@ internal sealed class OverlayCompositor : IDisposable
             // so a see-through card was shown for the whole wipe; a picture left from an earlier wipe could even come back.
             // Now: never freeze anything that is fading (whole-overlay fade or the graphic's own), else paint it live.
             bool fading = (e.HideOnOnboard && PresentationState.CardsHiddenK > 0.005f)
-                          || (e.Name != "replaywipe" && ReplayHideEased > 0.005f)
+                          || (e.Name != "replaywipe" && !(e.Name == "nametag" && ApexHUD.Native.Overlays.DeskBoard.IsReplayTagShown) && e.Name != "camcar" && ReplayHideEased > 0.005f)
                           || (e.CacheOk != null && !e.CacheOk());
             if (transition && e.Cacheable && !fading)
             {
@@ -1712,7 +1949,33 @@ internal sealed class OverlayCompositor : IDisposable
         // ticker visibility gates all read PresentationState.IsBattleActive.
         // Publish it once per present, right after battle.Draw (above) evaluated
         // it - the gates pick it up on the next FrameNeeded tick.
-        PresentationState.IsBattleActive = battle.IsActive && (battleEntry?.Allowed ?? true);
+        // 2026-11-06 (#908, #909): how close the camera car's fight is
+        try
+        {
+            bool close = false, three = false;
+            if (snap.CameraTarget is { } camD)
+            {
+                var cl = snap.ClassLeaderboard.FirstOrDefault(k => k.Drivers.Any(x => x.CarIdx == camD.CarIdx));
+                if (cl != null)
+                {
+                    var f = cl.Drivers.Where(x => x.PositionInClass > 0 && !x.IsInPit).OrderBy(x => x.PositionInClass).ToList();
+                    int i = f.FindIndex(x => x.CarIdx == camD.CarIdx);
+                    double gA = i > 0 ? (f[i].IntervalSeconds ?? 99) : 99, gB = i >= 0 && i + 1 < f.Count ? (f[i + 1].IntervalSeconds ?? 99) : 99;
+                    close = (gA > 0 && gA < 0.35) || (gB > 0 && gB < 0.35);
+                    int near = 1 + (gA > 0 && gA < 1.0 ? 1 : 0) + (gB > 0 && gB < 1.0 ? 1 : 0);
+                    if (i > 1 && gA > 0 && gA < 1.0 && (f[i - 1].IntervalSeconds ?? 99) is > 0 and < 1.0) near++;
+                    if (i >= 0 && i + 2 < f.Count && gB > 0 && gB < 1.0 && (f[i + 2].IntervalSeconds ?? 99) is > 0 and < 1.0) near++;
+                    three = near >= 3;
+                }
+            }
+            PresentationState.CloseFight = close; PresentationState.ThreeWay = three;
+        }
+        catch { }
+        PresentationState.BattleRaw = battle.IsActive && (battleEntry?.Allowed ?? true);
+        // #941: the tower now stays up through two-car fights, so the 10 s "tower's turn" (#873) that took the battle card
+        // away is no longer needed
+        PresentationState.TickTowerPulse(false);
+        PresentationState.IsBattleActive = battle.IsActive && !PresentationState.TowerPulse && (battleEntry?.Allowed ?? true);
 
         // Battle-mode diagnostic (2026-10-18): one log line every 5 s while connected,
         // with exactly what the battle gate sees, so a race where it didn't fire can
@@ -1786,6 +2049,14 @@ internal sealed class OverlayCompositor : IDisposable
         float watchCy = plateY + plateHeight / 2f;
         const float watchRadius = 64f;
 
+        // 2026-11-05 (Angelo): the watch can be switched off - a small glass disc with a digital clock takes its place
+        if (!ControlState.Current.ShowWatch)
+        {
+            DrawDigitalClock(canvas, watchCx, watchCy, 46f);
+            if (revealSave >= 0) canvas.RestoreToCount(revealSave);
+            return;
+        }
+
         var arrive = WatchArrive.Evaluate(nowMs);
         float shadowDy = 3f * watchRadius / 64f;
         float shadowSigma = 4f * watchRadius / 64f;
@@ -1831,6 +2102,352 @@ internal sealed class OverlayCompositor : IDisposable
         watch.Draw(canvas, watchCx, watchCy, watchRadius, DateTime.Now);
         canvas.Restore();
         if (revealSave >= 0) canvas.RestoreToCount(revealSave);
+    }
+
+    /// <summary>The same rules as ApplyControl, as if ON AIR were pressed (for the live view while off air).</summary>
+    static bool AllowedWithOnAir(Entry e, ControlSettings s)
+    {
+        bool allowed = s.Mode != "lean" || ControlState.LeanSet.Contains(e.Name);
+        if (e.Name == "custom") allowed &= s.CustomCards;
+        if (e.Name == "lensrain") allowed &= s.LensRain;
+        if (e.Name == "replaywipe") allowed &= s.ReplayWipes;
+        if (e.Name == "racecontrol") allowed &= s.RaceControlBar;
+        if (e.Name == "viewerlatest") allowed &= s.Viewer.KeepLatest;
+        if (e.Name == "iracingbug") allowed = !ApexHUD.Native.Common.ReplayState.IsReplay;
+        if (s.Elements.TryGetValue(e.Name, out var es)) allowed &= es.Enabled;
+        return allowed;   // vp_ graphics follow their own switches through Allowed (never shown here while off air)
+    }
+
+    // ---------------- 2026-11-05: the live view - the whole broadcast as one picture, plus where each graphic is ----------------
+    public sealed record LiveBox(string Id, float X, float Y, float W, float H, bool Drawn);
+    public static volatile LiveBox[] LiveBoxes = Array.Empty<LiveBox>();
+    public static volatile bool LiveIsLive, LiveOffAir;
+    double lastLiveLogMs = -1e9;
+    static bool SafeVis(Entry e) { try { return e.Visible(); } catch { return false; } }
+    readonly HashSet<string> previewWarmed = new(StringComparer.Ordinal);   // cards whose entrance the preview has already stepped through
+
+    /// <summary>Paint one graphic like PaintEntry (move / size / see-through / picture) but without the replay / onboard
+    /// fades and never counting a failure against the broadcast.</summary>
+    void PaintForPreview(Entry e, SKCanvas c, RaceSnapshot snap, double t, int W, int H)
+    {
+        int save = c.Save();
+        try
+        {
+            var a = e.Anchor?.Invoke(W, H) ?? new SKPoint(W / 2f, H / 2f);
+            if (e.Ox != 0f || e.Oy != 0f || e.Sc != 1f)
+            {
+                c.Translate(e.Ox, e.Oy);
+                if (e.Sc != 1f) { c.Translate(a.X, a.Y); c.Scale(e.Sc); c.Translate(-a.X, -a.Y); }
+            }
+            if (e.Op < 0.995f) { obLayer.Color = new SKColor(0, 0, 0, (byte)(255 * e.Op)); c.SaveLayer(obLayer); }
+            var img = e.Img;
+            if (img != null && CardPictures.TryRect(e.Name, out var design))
+            {
+                if (e.ImgBadge) { e.Paint(c, snap, t, W, H); CardPictures.DrawBadge(c, img, design, e.ImgOp); }
+                else { int gl = CardPictures.BeginGlass(c, design); e.Paint(c, snap, t, W, H); CardPictures.EndGlass(c, img, design, e.ImgOp, gl); }
+            }
+            else e.Paint(c, snap, t, W, H);
+        }
+        catch (Exception ex)
+        {
+            if (t - lastPreviewFailLogMs > 5000) { lastPreviewFailLogMs = t; Program.Log($"live view: {e.Name} didn't draw ({ex.GetType().Name}: {ex.Message})"); }
+        }
+        finally { c.RestoreToCount(save); }
+    }
+
+    SKRect PlacedRect(Entry e, SKRect design, int W, int H)
+    {
+        var a = e.Anchor?.Invoke(W, H) ?? new SKPoint(W / 2f, H / 2f);
+        return new SKRect(a.X + (design.Left - a.X) * e.Sc + e.Ox, a.Y + (design.Top - a.Y) * e.Sc + e.Oy,
+                          a.X + (design.Right - a.X) * e.Sc + e.Ox, a.Y + (design.Bottom - a.Y) * e.Sc + e.Oy);
+    }
+
+    void DrawBackdrop(SKCanvas o, int W, int H)
+    {
+        if (!previewBackdropTried)
+        {
+            previewBackdropTried = true;
+            try
+            {
+                var dir = System.IO.Path.Combine(AppContext.BaseDirectory, "assets", "transitions", "frames");
+                var f = System.IO.Directory.Exists(dir) ? System.IO.Directory.EnumerateFiles(dir, "*.jpg", System.IO.SearchOption.AllDirectories).OrderBy(p => p).Skip(40).FirstOrDefault()
+                                              ?? System.IO.Directory.EnumerateFiles(dir, "*.jpg", System.IO.SearchOption.AllDirectories).FirstOrDefault() : null;
+                if (f != null) previewBackdrop = SKImage.FromEncodedData(f);
+            }
+            catch { }
+        }
+        using var bg = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.Medium };
+        if (previewBackdrop != null)
+        {
+            float s = MathF.Max((float)W / previewBackdrop.Width, (float)H / previewBackdrop.Height);
+            float bw = previewBackdrop.Width * s, bh = previewBackdrop.Height * s;
+            o.DrawImage(previewBackdrop, new SKRect((W - bw) / 2, (H - bh) / 2, (W + bw) / 2, (H + bh) / 2), bg);
+            bg.Color = new SKColor(4, 6, 12, 120); o.DrawRect(0, 0, W, H, bg);
+        }
+        else
+        {
+            using var sh = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, H), new[] { new SKColor(0x2A, 0x33, 0x44), new SKColor(0x0B, 0x0F, 0x18) }, SKShaderTileMode.Clamp);
+            bg.Shader = sh; o.DrawRect(0, 0, W, H, bg);
+        }
+    }
+
+    /// <summary>Render thread: the whole broadcast (every graphic that is on, or would be on with ON AIR pressed) at outW
+    /// wide, over the backdrop, as a JPEG - live data in a session, the sample race otherwise.</summary>
+    // 2026-11-06 (Angelo: "the app is laggy when playing the overlays in live view"): the Live view picture is drawn on the
+    // graphics card (it was drawn on the CPU, ~60-100 ms a picture, on the same thread as the real overlay) and only read
+    // back + JPEG-encoded off this thread. Falls back to the CPU for good if the GPU path ever fails.
+    bool liveGpuFailed; double lastLiveTimeLogMs = -1e9;
+    void ServeFrame(RaceSnapshot liveSnap, double nowMs, int outW)
+    {
+        byte[]? jpg = null; bool live = liveSnap.IsConnected;   // true for a real session AND for the sample race (it runs the real logic)
+        bool delivered = false;
+        var oldOverride = App.SnapshotOverride;
+        try
+        {
+            const int W = 1920, H = 1080;
+            outW = Math.Clamp(outW, 480, 1920);
+            int outH = (int)Math.Round(outW * 9.0 / 16.0);
+            var snap = live ? liveSnap : (previewCanned ??= CannedSnapshot.Build());
+            App.SnapshotOverride = snap;
+            double t = nowMs;
+            if (!live) PresentationState.PreviewForce = true;   // real clock: forced moments (story cards, radio) play in step
+            var info = new SKImageInfo(outW, outH, SKColorType.Rgba8888, SKAlphaType.Premul);
+            SKSurface? gpuSurf = null;
+            var gr = IntroWatch.Gpu;
+            if (gr != null && !liveGpuFailed)
+            {
+                try { gr.ResetContext(); gpuSurf = SKSurface.Create(gr, false, info); }
+                catch { gpuSurf = null; liveGpuFailed = true; }
+            }
+            var liveSw = System.Diagnostics.Stopwatch.StartNew();
+            using var surf = gpuSurf ?? SKSurface.Create(info);
+            var c = surf.Canvas;
+            c.Scale(outW / (float)W);
+            DrawBackdrop(c, W, H);
+            var boxes = new List<LiveBox>();
+            foreach (var e in entries)
+            {
+                if (e.Broken || !e.AllowedIfOnAir) continue;
+                bool vis = e.PaintThisFrame;
+                if (!vis) { try { vis = e.Visible(); } catch { vis = false; } }
+                if (vis) PaintForPreview(e, c, snap, t, W, H);
+                if (CardPictures.TryRect(e.Name, out var d)) { var r = PlacedRect(e, d, W, H); boxes.Add(new LiveBox(e.Name, r.Left, r.Top, r.Width, r.Height, vis)); }
+            }
+            // graphics that are switched off still get a box (so they can be clicked and switched back on)
+            foreach (var e in entries)
+                if (!e.AllowedIfOnAir && CardPictures.TryRect(e.Name, out var d2) && !boxes.Any(b => b.Id == e.Name))
+                { var r = PlacedRect(e, d2, W, H); boxes.Add(new LiveBox(e.Name, r.Left, r.Top, r.Width, r.Height, false)); }
+            LiveBoxes = boxes.ToArray();
+            if (nowMs - lastLiveLogMs > 20000)
+            {
+                lastLiveLogMs = nowMs;
+                Program.Log($"live view drew ({(gpuSurf != null ? "GPU" : "CPU")}, {liveSw.Elapsed.TotalMilliseconds:0} ms to draw): " + string.Join(",", entries.Where(x => !x.Broken && x.AllowedIfOnAir && (x.PaintThisFrame || SafeVis(x))).Select(x => x.Name)));
+            }
+            LiveIsLive = raceState.Current.IsConnected; LiveOffAir = !ControlState.Current.OnAir;
+            // read the pixels back here (fast), encode the JPEG on a worker thread (the slow part)
+            var bmp = new SKBitmap(info);
+            if (!surf.ReadPixels(info, bmp.GetPixels(), bmp.RowBytes, 0, 0)) { bmp.Dispose(); throw new InvalidOperationException("read back failed"); }
+            if (nowMs - lastLiveTimeLogMs > 5000) { lastLiveTimeLogMs = nowMs; Program.Log($"live view frame: {(gpuSurf != null ? "GPU" : "CPU")} draw+readback {liveSw.Elapsed.TotalMilliseconds:0} ms at {outW}"); }
+            bool liveNow = raceState.Current.IsConnected;
+            delivered = true;
+            _ = Task.Run(() =>
+            {
+                byte[]? bytes = null;
+                try { using (bmp) using (var img = SKImage.FromBitmap(bmp)) using (var data = img.Encode(SKEncodedImageFormat.Jpeg, 80)) bytes = data?.ToArray(); }
+                catch { }
+                CardPreview.Deliver(bytes, false, liveNow);
+            });
+        }
+        catch (Exception ex)
+        {
+            jpg = null;
+            if (IntroWatch.Gpu != null && !liveGpuFailed) { liveGpuFailed = true; Program.Log("live view: GPU drawing failed, using the CPU (" + ex.Message + ")"); }
+            if (nowMs - lastPreviewFailLogMs > 10000) { lastPreviewFailLogMs = nowMs; Program.Log($"live view: {ex.GetType().Name}: {ex.Message}"); }
+        }
+        finally
+        {
+            PresentationState.PreviewForce = false;
+            App.SnapshotOverride = oldOverride;
+            if (!delivered) CardPreview.Deliver(jpg, false, raceState.Current.IsConnected);
+        }
+    }
+
+    /// <summary>2026-11-06 (Angelo: the app's header watch "should look like the one in the overlay"): the session bar's own
+    /// watch (same renderer, face and hands) at the time now, as a transparent PNG for the control app's top bar.</summary>
+    void ServeWatch(int size)
+    {
+        bool delivered = false;
+        try
+        {
+            size = Math.Clamp(size, 64, 320);
+            var info = new SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul);
+            using var surf = SKSurface.Create(info);
+            var c = surf.Canvas;
+            c.Clear(SKColors.Transparent);
+            watch.Draw(c, size / 2f, size / 2f, size / 2f - 1f, DateTime.Now);
+            var bmp = new SKBitmap(info);
+            surf.ReadPixels(info, bmp.GetPixels(), bmp.RowBytes, 0, 0);
+            delivered = true;
+            _ = Task.Run(() =>
+            {
+                byte[]? png = null;
+                try { using (bmp) using (var img = SKImage.FromBitmap(bmp)) using (var d = img.Encode(SKEncodedImageFormat.Png, 90)) png = d?.ToArray(); } catch { }
+                CardPreview.Deliver(png, false, raceState.Current.IsConnected);
+            });
+        }
+        catch { }
+        finally { if (!delivered) CardPreview.Deliver(null, true, raceState.Current.IsConnected); }
+    }
+
+    // ---------------- 2026-11-05: the card editor's live preview (CardPreview.cs) ----------------
+    RaceSnapshot? previewCanned, previewCannedPre;
+    SKImage? previewBackdrop; bool previewBackdropTried;
+    double lastPreviewFailLogMs = -1e9, previewClockMs = -1e9, lastRadioSampleMs = -1e9;
+    static readonly HashSet<string> PreviewPreRaceIds = new(StringComparer.Ordinal) { "grid", "spotlight", "precards" };
+
+    /// <summary>Render thread: draw ONE graphic the way it goes on air (its own renderer, position, size, see-through,
+    /// picture, theme) onto an offscreen 1080p canvas over a racing backdrop, crop to the graphic and hand back a PNG.
+    /// Never counts as a broadcast failure: an error here only means "no preview".</summary>
+    void ServePreview(string id, RaceSnapshot liveSnap, double nowMs)
+    {
+        byte[]? png = null; bool empty = true, live = liveSnap.IsConnected;
+        var oldOverride = App.SnapshotOverride;
+        try
+        {
+            Entry? e = null;
+            foreach (var x in entries) if (x.Name == id) { e = x; break; }
+            if (e == null || !CardPictures.TryRect(id, out var design)) return;
+            var snap = live ? liveSnap : PreviewPreRaceIds.Contains(id)
+                ? (previewCannedPre ??= CannedSnapshot.Build() with { Phase = RacePhase.PreRace })
+                : (previewCanned ??= CannedSnapshot.Build());
+            App.SnapshotOverride = snap;
+            const int W = 1920, H = 1080;
+
+            // No race live (nothing on air, the overlay is hidden): let the graphics that only draw "while on" show their
+            // on-air look for this one drawing - the tower and the driver card are told they're on, and their entrance
+            // fades are stepped through on a clock of the preview's own (never behind the last one), so the picture is
+            // the finished card, not the first frame of its fade. A live race is never touched: then it's drawn as-is.
+            if (!live)
+            {
+                PresentationState.PreviewForce = true;
+                if (id == "radio" && nowMs - lastRadioSampleMs > 20000) { lastRadioSampleMs = nowMs; RadioFeed.Push("ENGINEER", "Good pace. Box this lap, box this lap - we're going to four tyres."); }
+                // the first preview of a card steps its entrance fade through (real clock, a moment in the past, so the
+                // renderers never see time go backwards later); after that its gate is already open
+                if (previewWarmed.Add(id))
+                {
+                    using var warm = new SKNoDrawCanvas(W, H);
+                    try { e.Paint(warm, snap, nowMs - 1600, W, H); e.Paint(warm, snap, nowMs - 900, W, H); } catch { }
+                }
+            }
+
+            // 1) the graphic alone on a clear canvas (to know where it actually drew)
+            using var card = SKSurface.Create(new SKImageInfo(W, H, SKColorType.Rgba8888, SKAlphaType.Premul));
+            var c = card.Canvas;
+            c.Clear(SKColors.Transparent);
+            int save = c.Save();
+            var a = e.Anchor?.Invoke(W, H) ?? new SKPoint(W / 2f, H / 2f);
+            if (e.Ox != 0f || e.Oy != 0f || e.Sc != 1f)
+            {
+                c.Translate(e.Ox, e.Oy);
+                if (e.Sc != 1f) { c.Translate(a.X, a.Y); c.Scale(e.Sc); c.Translate(-a.X, -a.Y); }
+            }
+            if (e.Op < 0.995f) { obLayer.Color = new SKColor(0, 0, 0, (byte)(255 * e.Op)); c.SaveLayer(obLayer); }
+            var img = e.Img;
+            if (img != null)
+            {
+                if (e.ImgBadge) { e.Paint(c, snap, nowMs, W, H); CardPictures.DrawBadge(c, img, design, e.ImgOp); }
+                else { int gl = CardPictures.BeginGlass(c, design); e.Paint(c, snap, nowMs, W, H); CardPictures.EndGlass(c, img, design, e.ImgOp, gl); }
+            }
+            else e.Paint(c, snap, nowMs, W, H);
+            c.RestoreToCount(save);
+            using var cardImg = card.Snapshot();
+
+            // where the graphic sits after its own move / resize, with a margin
+            float L = a.X + (design.Left - a.X) * e.Sc + e.Ox, T = a.Y + (design.Top - a.Y) * e.Sc + e.Oy;
+            float R = a.X + (design.Right - a.X) * e.Sc + e.Ox, B = a.Y + (design.Bottom - a.Y) * e.Sc + e.Oy;
+            var crop = SKRectI.Round(new SKRect(MathF.Max(0, L - 28), MathF.Max(0, T - 28), MathF.Min(W, R + 28), MathF.Min(H, B + 28)));
+            if (crop.Width < 8 || crop.Height < 8) crop = new SKRectI(0, 0, W, H);
+
+            // anything drawn in that box?
+            using (var pm = cardImg.PeekPixels())
+            {
+                if (pm != null)
+                {
+                    var span = pm.GetPixelSpan();
+                    int stride = pm.RowBytes;
+                    for (int y = crop.Top; y < crop.Bottom && empty; y += 3)
+                        for (int x = crop.Left; x < crop.Right; x += 3)
+                            if (span[y * stride + x * 4 + 3] > 10) { empty = false; break; }
+                }
+            }
+
+            // 2) over a racing backdrop, darkened like a real broadcast frame
+            using var outS = SKSurface.Create(new SKImageInfo(crop.Width, crop.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
+            var o = outS.Canvas;
+            o.Translate(-crop.Left, -crop.Top);
+            if (!previewBackdropTried)
+            {
+                previewBackdropTried = true;
+                try
+                {
+                    var dir = System.IO.Path.Combine(AppContext.BaseDirectory, "assets", "transitions", "frames");
+                    var f = System.IO.Directory.Exists(dir) ? System.IO.Directory.EnumerateFiles(dir, "*.jpg", System.IO.SearchOption.AllDirectories).OrderBy(p => p).Skip(40).FirstOrDefault()
+                                                  ?? System.IO.Directory.EnumerateFiles(dir, "*.jpg", System.IO.SearchOption.AllDirectories).FirstOrDefault() : null;
+                    if (f != null) previewBackdrop = SKImage.FromEncodedData(f);
+                }
+                catch { }
+            }
+            using (var bg = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.Medium })
+            {
+                if (previewBackdrop != null)
+                {
+                    float s = MathF.Max((float)W / previewBackdrop.Width, (float)H / previewBackdrop.Height);
+                    float bw = previewBackdrop.Width * s, bh = previewBackdrop.Height * s;
+                    o.DrawImage(previewBackdrop, new SKRect((W - bw) / 2, (H - bh) / 2, (W + bw) / 2, (H + bh) / 2), bg);
+                    bg.Color = new SKColor(4, 6, 12, 120); o.DrawRect(0, 0, W, H, bg);
+                }
+                else
+                {
+                    using var sh = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, H), new[] { new SKColor(0x2A, 0x33, 0x44), new SKColor(0x0B, 0x0F, 0x18) }, SKShaderTileMode.Clamp);
+                    bg.Shader = sh; o.DrawRect(0, 0, W, H, bg);
+                }
+            }
+            o.DrawImage(cardImg, 0, 0);
+            using var shot = outS.Snapshot();
+            using var data = shot.Encode(SKEncodedImageFormat.Png, 90);
+            png = data?.ToArray();
+        }
+        catch (Exception ex)
+        {
+            png = null;
+            if (nowMs - lastPreviewFailLogMs > 10000) { lastPreviewFailLogMs = nowMs; Program.Log($"card preview ({id}): {ex.GetType().Name}: {ex.Message}"); }
+        }
+        finally
+        {
+            PresentationState.PreviewForce = false;
+            App.SnapshotOverride = oldOverride;
+            CardPreview.Deliver(png, empty, raceState.Current.IsConnected);
+        }
+    }
+
+    SKPaint? dcFill, dcRing, dcText, dcSmall; SKTypeface? dcFace;
+    /// <summary>The watch's stand-in when it is switched off: navy glass disc, gold ring, local time.</summary>
+    void DrawDigitalClock(SKCanvas c, float cx, float cy, float r)
+    {
+        dcFace ??= ApexHUD.Native.Overlays.Fonts.BarlowCondensed.SemiBold;
+        dcFill ??= new SKPaint { IsAntialias = true };
+        dcRing ??= new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1.6f, Color = new SKColor(0xC5, 0xA5, 0x72, 230) };
+        dcText ??= new SKPaint { IsAntialias = true, Color = new SKColor(0xF7, 0xF4, 0xEC), TextAlign = SKTextAlign.Center, Typeface = dcFace, TextSize = 30f };
+        dcSmall ??= new SKPaint { IsAntialias = true, Color = new SKColor(0xC5, 0xA5, 0x72), TextAlign = SKTextAlign.Center, Typeface = dcFace, TextSize = 11f };
+        using (var sh = SKShader.CreateLinearGradient(new SKPoint(cx, cy - r), new SKPoint(cx, cy + r),
+                   new[] { new SKColor(0x14, 0x19, 0x26), new SKColor(0x06, 0x08, 0x0E) }, SKShaderTileMode.Clamp))
+        {
+            dcFill.Shader = sh; c.DrawCircle(cx, cy, r, dcFill); dcFill.Shader = null;
+        }
+        c.DrawCircle(cx, cy, r - 1f, dcRing);
+        var now = DateTime.Now;
+        c.DrawText(now.ToString("HH:mm"), cx, cy + 10f, dcText);
+        c.DrawText("LOCAL", cx, cy + 26f, dcSmall);
     }
 
     float ComputeBarWidth(float screenWidth, double elapsedMs)

@@ -83,6 +83,8 @@ internal sealed class HighlightReelRunner : IDisposable
         total = Total,
         label = Label,
         saved = Saved,
+        armed = autoArmedKey.Length > 0 && !Running,
+        auto = ControlState.Current.AutoReel,
     };
 
     /// <summary>Starts the reel for <paramref name="file"/> (a file name in the highlights folder; null/empty = the
@@ -115,9 +117,61 @@ internal sealed class HighlightReelRunner : IDisposable
         }
     }
 
+    // ---------------------------------------------------------------- the reel by itself after a race (2026-11-06)
+    // Angelo: "can you have it make race highlights at the end too?" - with "Highlight reel after the race" on: when a
+    // real race reaches the chequered flag, the reel is armed; once you leave the car (back to the garage / spectating),
+    // OBS is running and the podium has finished, a 15 s countdown shows on the control page (Stop cancels it), then the
+    // reel plays the race's moments while OBS records the video. Never for the sample race, replay files or practice.
+    string autoArmedKey = "", autoDoneKey = "";
+    long autoOutSinceMs = -1;
+    RacePhase autoLast = RacePhase.Unknown;
+    public bool AutoWaiting => autoArmedKey.Length > 0 && autoOutSinceMs >= 0 && !Running;
+
+    public void AutoTick()
+    {
+        var s = rs.Current;
+        if (!ControlState.Current.AutoReel || !s.IsConnected || OverlayCompositor.SampleRunning) { autoLast = s.Phase; Cancel(""); return; }
+        bool isRace = (s.SessionTypeName ?? "").Contains("race", StringComparison.OrdinalIgnoreCase);
+        if (isRace && !ReplayState.IsReplayFile && s.Phase == RacePhase.PostRace && autoLast == RacePhase.Broadcast && s.SessionKey != autoDoneKey)
+        {
+            autoArmedKey = s.SessionKey; autoOutSinceMs = -1;
+            Program.Log("reel: race finished - the highlight reel starts when you leave the car");
+        }
+        autoLast = s.Phase;
+        if (autoArmedKey.Length == 0 || Running) return;
+        if (autoArmedKey != s.SessionKey) { Cancel(""); return; }
+        bool outOfCar = !rs.ReadBool("IsOnTrack") && !DrivingState.DrivingLive;
+        bool obs = false; try { obs = System.Diagnostics.Process.GetProcessesByName("obs64").Length > 0; } catch { }
+        if (!outOfCar || !obs || OutroDirector.FullScreen)
+        {
+            autoOutSinceMs = -1;
+            State = "Armed";
+            Why = !obs ? "Race finished. Open OBS and the highlight reel will start after you leave the car." : "Race finished. The highlight reel starts once you leave the car and the podium is over.";
+            return;
+        }
+        long now = Environment.TickCount64;
+        if (autoOutSinceMs < 0) autoOutSinceMs = now;
+        long left = 15000 - (now - autoOutSinceMs);
+        if (left > 0) { State = "Waiting"; Why = $"Race finished: the highlight reel starts in {Math.Ceiling(left / 1000.0)} s. Press Stop to skip it this time."; return; }
+        if (Start(null, out var msg)) { autoDoneKey = autoArmedKey; autoArmedKey = ""; autoOutSinceMs = -1; Program.Log("reel: started by itself after the race"); }
+        else
+        {
+            State = "Waiting"; Why = "Race finished, the reel is waiting: " + msg;
+            if (now - autoOutSinceMs > 10 * 60_000) Cancel("Race finished, but the reel couldn't start (" + msg + "). Start it here when you're ready.");
+        }
+    }
+
+    void Cancel(string why)
+    {
+        if (autoArmedKey.Length == 0) return;
+        autoDoneKey = autoArmedKey; autoArmedKey = ""; autoOutSinceMs = -1;
+        if (!Running) { State = "Idle"; Why = why.Length > 0 ? why : "Pick a session and press Start while iRacing shows its replay."; }
+    }
+
     /// <summary>Stops the reel (Stop button / POST /api/reel/stop). The recording made so far is kept.</summary>
     public void Stop(string why = "Stopped by you.")
     {
+        if (!Running && autoArmedKey.Length > 0) { Cancel("Skipped for this race. Start it here any time."); return; }
         if (!Running) return;
         stopWhy = why;
         stopRequested = true;
@@ -127,11 +181,14 @@ internal sealed class HighlightReelRunner : IDisposable
     // ---------------------------------------------------------------- the run (its own thread)
 
     bool recordingOurs, recordingAny;
+    readonly List<string> ytChapters = new();
+    double videoSeconds;
 
     void Run(List<HighlightReel.Moment> plan)
     {
         recordingOurs = recordingAny = false;
         bool paused = false;
+        ytChapters.Clear(); videoSeconds = 0;
         try
         {
             var groups = rs.CameraGroups().Select(g => (g.Num, g.Name)).ToList();
@@ -174,6 +231,10 @@ internal sealed class HighlightReelRunner : IDisposable
                 }
                 else if (paused) { Obs(ObsMarkers.ResumeRecordAsync(), "resume"); paused = false; }
                 if (recordingAny) _ = ObsMarkers.ChapterAsync(m.Chapter);
+                // 2026-11-06: YouTube chapter for the uploaded video (time in the recording, first at 0:00)
+                var vt = TimeSpan.FromSeconds(Math.Round(videoSeconds));
+                ytChapters.Add($"{(vt.Hours > 0 ? vt.ToString(@"h\:mm\:ss") : $"{(int)vt.TotalMinutes}:{vt.Seconds:00}")} {m.Chapter}");
+                videoSeconds += m.PlaySeconds;
                 // 4. play at 1x until the replay clock reaches the end of the moment
                 rs.ReplaySpeed(1, false);
                 if (!Play(m, car, group)) break;
@@ -197,6 +258,9 @@ internal sealed class HighlightReelRunner : IDisposable
             catch { }
             if (stopRequested) { State = "Stopped"; Why = stopWhy + (Saved.Length > 0 ? " Saved: " + Saved : ""); Program.Log("reel: stopped - " + stopWhy); }
             HighlightReel.Playing = false;
+            // 2026-11-06: a finished reel goes to YouTube (when signed in), then its link to Discord
+            if (!stopRequested && Saved.Length > 0)
+                try { YouTubeUpload.ReelFinished(Saved, HighlightReel.SessionLabel(File) + " - race highlights", string.Join("\n", ytChapters)); } catch { }
         }
     }
 

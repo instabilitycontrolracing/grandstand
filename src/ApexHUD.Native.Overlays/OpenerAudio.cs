@@ -22,10 +22,17 @@ public static class OpenerAudio
     /// <summary>Quick fade-out and stop (2026-10-25: the replay was rewound / skipped through the opener).</summary>
     public static void Stop() { if (Volatile.Read(ref playing) == 1) stopRequested = true; }
 
+    /// <summary>2026-11-06: play at volume 0 (the Live view plays the music in the app instead; timing stays exact).</summary>
+    public static volatile bool Silent;
+    /// <summary>2026-11-06: (file, seconds it plays) for every opener that starts - the Live view's in-app sound.</summary>
+    public static Action<string, double>? OnOpen;
+
     public static bool Play(string file, double maxSeconds = 60, double fadeSeconds = 1.0, double volume = 0.85)
     {
         if (!System.IO.File.Exists(file)) return false;
         if (Interlocked.Exchange(ref playing, 1) == 1) return false;     // one opener at a time
+        try { OnOpen?.Invoke(file, maxSeconds); } catch { }
+        if (Silent) volume = 0;
         Interlocked.Exchange(ref startedTicks, 0);
         stopRequested = false;
         var t = new Thread(() =>

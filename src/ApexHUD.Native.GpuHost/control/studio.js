@@ -212,7 +212,7 @@
       <div class="panel"><h2>Build it</h2><div class="grid" style="gap:14px">
         <div class="seg" role="group" aria-label="Template">${TEMPLATES.map(([k, l, h]) => `<button type="button" data-tpl="${k}" aria-pressed="${d.template === k}" title="${h}">${l}</button>`).join("")}</div>
         <div class="grid g2"><label class="f">Headline<input id="cName" value="${esc(d.name)}" maxlength="40"></label>
-          <label class="f">Data<input id="cField" value="${esc(d.field)}" list="fields" maxlength="48"><datalist id="fields">${fieldOpts}</datalist></label></div>
+          <div class="f">Data<div class="datafield"><input id="cField" class="in" value="${esc(d.field)}" list="fields" maxlength="160" aria-label="Data"><button type="button" class="btn sm gold" id="pickData">Choose…</button></div><datalist id="fields">${fieldOpts}</datalist></div></div>
         <label class="f">Small line under the headline (optional)<input id="cLabel" value="${esc(d.label)}" maxlength="40" placeholder="${d.template === "number" ? "places in 3 laps" : "fastest this race"}"></label>
         <label class="f">When it shows<select id="cTrig">${TRIGGERS.map(([k, l]) => `<option value="${k}" ${d.trigger === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
         <div class="row" style="flex-wrap:wrap;gap:8px;border:0">${d.trigger === "gain" ? `Gains <input class="in" id="cAmt" type="number" min="1" max="20" value="${d.amount}" style="width:70px"> places in <input class="in" id="cLaps" type="number" min="1" max="20" value="${d.laps}" style="width:70px"> laps`
@@ -259,7 +259,58 @@
       refreshCards(); return id;
     }).catch((e) => { toast("Not saved: " + e.message); throw e; });
   }
+  // ---- 2026-11-05 (Angelo: "hook up any data point that could be used in the game"): the data picker ----
+  // Race numbers, every car detail, every iRacing live value and every session info value (GET /api/datacatalog);
+  // iRacing's lists are remembered from the last session so the picker is full with iRacing closed.
+  let dcat = null, dTab = "builtin", dQuery = "";
+  function pickerRows() {
+    const g = dcat?.groups?.find((x) => x.key === dTab); if (!g) return "";
+    const q = dQuery.trim().toLowerCase();
+    const items = g.items.filter((i) => !q || i.name.toLowerCase().includes(q) || (i.desc || "").toLowerCase().includes(q));
+    if (!items.length) return `<p class="muted" style="padding:14px 4px">${g.items.length ? "Nothing matches that search." : dTab === "tel" || dTab === "session" ? "Open iRacing once (on track, or watching a replay) and Grandstand remembers every value here for next time, even with iRacing closed." : "Nothing here yet."}</p>`;
+    return items.slice(0, 500).map((i) => `<button type="button" class="drow ${i.name === draft.field ? "on" : ""}" data-dpick="${esc(i.name)}"><span class="dn mono">${esc(i.name)}</span><span class="dd">${esc(i.desc || "")}${i.unit ? ` <i>${esc(i.unit)}</i>` : ""}</span><span class="dv mono">${esc(i.value || "")}</span></button>`).join("")
+      + (items.length > 500 ? `<p class="muted" style="padding:10px 4px">${items.length - 500} more - type to narrow it down.</p>` : "");
+  }
+  function paintPicker() {
+    const m = $("#dataPicker"); if (!m) return;
+    $(".dp-tabs", m).innerHTML = (dcat?.groups || []).map((g) => `<button type="button" data-dtab="${g.key}" aria-pressed="${g.key === dTab}">${esc(g.title)} <small>${g.items.length}</small></button>`).join("");
+    const g = dcat?.groups?.find((x) => x.key === dTab);
+    $(".dp-hint", m).textContent = g ? g.hint : "";
+    $(".dp-list", m).innerHTML = dcat ? pickerRows() : `<p class="muted" style="padding:14px 4px">Reading everything Grandstand can show…</p>`;
+    $(".dp-src", m).textContent = !dcat ? "" : dcat.live ? `Live from iRacing${dcat.car ? " · values for " + dcat.car : ""}` : dcat.remembered ? `iRacing is closed · lists remembered from ${dcat.remembered}` : "iRacing is closed · sample race values";
+  }
+  function openPicker() {
+    closePicker();
+    const m = document.createElement("div"); m.id = "dataPicker"; m.className = "dpick";
+    m.innerHTML = `<div class="dp-box" role="dialog" aria-label="Choose the data">
+      <div class="dp-head"><div><div class="kicker">Card builder</div><h2>Choose the data</h2></div><button type="button" class="ed-x" data-dclose aria-label="Close">×</button></div>
+      <div class="dp-tabs seg"></div>
+      <div class="dp-bar"><input class="in" id="dpSearch" placeholder="Search: speed, fuel, tyre, track, team, weather…" value="${esc(dQuery)}" autocomplete="off"><span class="dp-src muted"></span></div>
+      <p class="dp-hint muted"></p>
+      <div class="dp-list"></div></div>`;
+    document.body.appendChild(m);
+    requestAnimationFrame(() => m.classList.add("on"));
+    paintPicker();
+    $("#dpSearch").focus();
+    api.get("/api/datacatalog").then((r) => { dcat = r; paintPicker(); }).catch(() => { const l = $(".dp-list", m); if (l) l.innerHTML = `<p class="muted" style="padding:14px 4px">Couldn't reach Grandstand.</p>`; });
+    m.addEventListener("click", (e) => {
+      if (e.target === m || e.target.closest("[data-dclose]")) { closePicker(); return; }
+      const tb = e.target.closest("[data-dtab]"); if (tb) { dTab = tb.dataset.dtab; paintPicker(); return; }
+      const r = e.target.closest("[data-dpick]");
+      if (r) {
+        draft.field = r.dataset.dpick;
+        if (draft.trigger === "gain" && draft.field !== "PlacesGained") draft.trigger = "manual";
+        closePicker(); GS.render(); toast("Data: " + draft.field);
+      }
+    });
+    m.addEventListener("input", (e) => { if (e.target.id === "dpSearch") { dQuery = e.target.value; $(".dp-list", m).innerHTML = pickerRows(); } });
+    document.addEventListener("keydown", pickerKey);
+  }
+  function pickerKey(e) { if (e.key === "Escape") closePicker(); }
+  function closePicker() { $("#dataPicker")?.remove(); document.removeEventListener("keydown", pickerKey); }
+
   BIND.builder = (host) => {
+    GS.leaveHooks.push(closePicker);
     const repaint = () => { $("#pvwrap").innerHTML = cardPreview(); };
     const sync = (e) => {
       const t = e?.target;
@@ -286,6 +337,7 @@
     host.addEventListener("click", (e) => {
       const tp = e.target.closest("[data-tpl]"); if (tp) { draft.template = tp.dataset.tpl; if (tp.dataset.tpl === "top5" && draft.field === "PlacesGained" && draft.trigger === "gain") draft.trigger = "everylaps", draft.amount = 10, draft.field = "BestLap", draft.name = "Fastest so far"; GS.render(); return; }
       const t = e.target;
+      if (t.id === "pickData") { openPicker(); return; }
       if (t.id === "newCard") { newDraft(); GS.render(); return; }
       if (t.id === "saveCard") { saveDraft().catch(() => {}); return; }
       if (t.id === "playCard") { saveDraft().then((id) => api.post(`/api/cards/${encodeURIComponent(id)}/play`, null)).then(() => toast("Playing on air: " + draft.name)).catch(() => {}); return; }

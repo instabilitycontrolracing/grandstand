@@ -13,6 +13,13 @@ internal sealed class ElementSettings
     public float X { get; set; }
     public float Y { get; set; }
     public float Scale { get; set; } = 1f;
+    // 2026-11-05 (card editor): how see-through the whole graphic is (1 = solid), and an optional picture for it -
+    // a file in Documents\iRacing\Grandstand\card_images. "glass" = laid across the card behind the glass (only where
+    // the card is drawn), "badge" = a small logo in the card's top-right corner.
+    public float Opacity { get; set; } = 1f;
+    public string Image { get; set; } = "";
+    public string ImageMode { get; set; } = "glass";
+    public float ImageOpacity { get; set; } = 0.3f;
 }
 
 /// <summary>Everything the Grandstand control app can set. Saved as JSON in
@@ -23,6 +30,8 @@ internal sealed class ControlSettings
     public string Mode { get; set; } = "broadcast";
     /// <summary>Master switch: false hides every graphic.</summary>
     public bool OnAir { get; set; } = true;
+    /// <summary>2026-11-05: the watch in the session bar; off = a small digital clock in its place.</summary>
+    public bool ShowWatch { get; set; } = true;
     public Dictionary<string, ElementSettings> Elements { get; set; } = new();
     /// <summary>How long a story card stays on screen, seconds.</summary>
     public double StoryCardSeconds { get; set; } = 15;   // 2026-10-24 (Angelo): race graphics stay up longer
@@ -66,6 +75,8 @@ internal sealed class ControlSettings
     /// built into OBS 28+): a chapter in the recording (OBS 30.2+, Hybrid MP4) and, if OBS's Replay Buffer is running, a
     /// saved clip. Settings are read from OBS's own config on this PC. OFF by default.</summary>
     public bool HighlightsObs { get; set; }
+    /// <summary>2026-11-06: play the highlight reel by itself after a race (once you leave the car, OBS running).</summary>
+    public bool AutoReel { get; set; }
     /// <summary>2026-10-28 (#488): Grandstand switches OBS between its scenes (Racing / Battle / Story card / Onboard /
     /// Replay / Post-race / Starting soon) to match what's on screen - only while OBS shows one of those scenes.</summary>
     public bool ObsDirector { get; set; } = true;
@@ -102,6 +113,12 @@ internal sealed class ControlSettings
     /// <summary>2026-10-30 (#619): race control as a slim bar under the session bar (under the ticker in a battle, under the
     /// corner / straight name on an onboard). ON by default; off = the old race-control card in the radio column.</summary>
     public bool RaceControlBar { get; set; } = true;
+    /// <summary>2026-11-05 (#777): CrewChief's calls on the radio card (read from CrewChief's shared memory). OFF by default.</summary>
+    public bool CrewChiefRadio { get; set; } = false;
+    /// <summary>2026-11-05 (#777): include CrewChief's spotter calls ("car left", "clear") - chatty, so OFF by default.</summary>
+    public bool CrewChiefSpotter { get; set; } = false;
+    /// <summary>2026-11-05 (#778): the user's telemetry widgets (Documents\iRacing\Grandstand\telemetry_widgets.json). OFF by default.</summary>
+    public bool TelemetryWidgets { get; set; } = false;
     /// <summary>2026-10-30 (#611): keep the face / pedal cams in OBS clear of the graphics (moves them between slots).</summary>
     public CamSettings Cams { get; set; } = new();
     /// <summary>2026-10-31 (#644): Grandstand draws the face cam itself (bottom of the left column, above the tower, under

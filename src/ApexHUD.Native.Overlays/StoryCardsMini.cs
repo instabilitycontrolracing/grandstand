@@ -43,6 +43,9 @@ public static partial class StoryDirector
     static bool MiniBlocked(RaceSnapshot snap)
     {
         if (Blocked(snap) || PresentationState.OnboardSoon || CustomCards.Visible) return true;
+        // 2026-11-06 (#928, Angelo #909: cards get out of the way when cars are within ~0.3 s): the mini cards too -
+        // a contact mini card came up inside a 0.3 s fight
+        if (PresentationState.CloseFight || PresentationState.ThreeWay) return true;
         if (VpLayout.RadioVisible)
         {
             var r = StoryCards.MiniRect(); r.Inflate(8, 8);

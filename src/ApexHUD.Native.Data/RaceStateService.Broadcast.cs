@@ -92,6 +92,25 @@ public sealed partial class RaceStateService
         return list;
     }
 
+    /// <summary>2026-11-06: the camera on screen right now by name ("CamTV1_07", "CamGearbox"...), "" when unknown.
+    /// At Le Mans iRacing's TV1 / TV2 / TV Mixed groups also hold onboard, cockpit and chopper cameras.</summary>
+    public string CurrentCameraName()
+    {
+        try
+        {
+            if (!sdkConnected) return "";
+            int g = ReadInt("CamGroupNumber"), c = ReadInt("CamCameraNumber");
+            var groups = irsdk.Data.SessionInfo?.CameraInfo?.Groups;
+            if (groups == null) return "";
+            foreach (var gr in groups)
+                if (gr != null && gr.GroupNum == g && gr.Cameras != null)
+                    foreach (var cam in gr.Cameras)
+                        if (cam != null && cam.CameraNum == c) return cam.CameraName ?? "";
+        }
+        catch { }
+        return "";
+    }
+
     /// <summary>CarIdx → iRacing's raw car number (what the camera-switch message wants).</summary>
     public IReadOnlyDictionary<int, int> CarNumbersRaw()
     {
@@ -133,6 +152,14 @@ public sealed partial class RaceStateService
     {
         if (!sdkConnected) return false;
         try { irsdk.CamSwitchPos(IRacingSdkEnum.CamSwitchMode.FocusAtDriver, position, group, camera); return true; }
+        catch { return false; }
+    }
+
+    /// <summary>2026-11-06: iRacing's replay search (to start / end, next / previous incident, lap, session).</summary>
+    public bool ReplaySearch(IRacingSdkEnum.RpySrchMode mode)
+    {
+        if (!sdkConnected) return false;
+        try { irsdk.ReplaySearch(mode); return true; }
         catch { return false; }
     }
 

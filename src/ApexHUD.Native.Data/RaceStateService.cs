@@ -21,6 +21,9 @@ namespace ApexHUD.Native.Data;
 /// </remarks>
 public sealed partial class RaceStateService : IDisposable
 {
+    /// <summary>2026-11-06 (league roster): (iRacing name, car number) -> the league's display name, or null to keep
+    /// iRacing's. Read when iRacing's driver list changes.</summary>
+    public static Func<string, string, string?>? NameOverride;
     readonly IRacingSdk irsdk = new();
 
     // SessionInfo cache, swapped wholesale on each YAML event.
@@ -74,6 +77,7 @@ public sealed partial class RaceStateService : IDisposable
     int holdSessionNum = int.MinValue;   // the hold never carries laps from one session into the next
     double lastSessionTime = -1;
     string greenSeenKey = ""; bool greenPending;   // #405: waiting for this race session's green
+    double greenPrevSt = -1; int greenPrevState;    // #935: the green is saved only when seen happen on a running clock
     long subSessionId;               // for the sector timing file (2026-10-24)
     string keyCache = ""; long keySub = -1; int keyNum = int.MinValue;
     string KeyFor(int num)
@@ -85,6 +89,38 @@ public sealed partial class RaceStateService : IDisposable
     /// <summary>Counts replay jumps (session clock moved back, or forward by more than a few seconds at once).
     /// The overlay resets its race diary when this changes.</summary>
     public int ReplayJumps => Volatile.Read(ref replayJumps);
+    /// <summary>2026-11-06 (#882): flags for a replay file, which records none. Bits as iRacing's: chequered 0x1, white 0x2, green 0x4.</summary>
+    uint ReplayFlagsFallback()
+    {
+        // 2026-11-06 (#894, Angelo: "flags should not play in lone qualifying"): only a race gets made-up flags
+        try { if (!(Current.SessionTypeName ?? "").Contains("race", StringComparison.OrdinalIgnoreCase)) return 0u; } catch { return 0u; }
+        int state = ReadInt("SessionState", fallback: 0);
+        if (state >= 5) return 0x1u;
+        if (state != 4) return 0u;
+        int lapsRemain = ReadInt("SessionLapsRemainEx", fallback: 32767);
+        if (lapsRemain == 1) return 0x4u | 0x2u;
+        if (lapsRemain >= 32767)
+        {
+            // 2026-11-06 (#934, checked against the Le Mans replay: the clock ran out at 2699 s, the leader crossed the line
+            // ~2800 s and took the chequered flag at ~3030 s): in a timed race the white flag is the lap the leader STARTS
+            // after the clock has run out. The old rule (less than a lap on the clock) waved white for ~9 minutes.
+            // Leader's time into the current lap ~ lap fraction x pace; started after expiry when that is under -remain.
+            // The race clock runs from the green (#405, same clock as the session bar), so use it when the green is known.
+            // White = the clock runs out during the lap the leader is on now: time left < what's left of the leader's lap.
+            double tr = ReadDouble("SessionTimeRemain");
+            try
+            {
+                double stNow = ReadDouble("SessionTime"), len = Current.SessionLengthSeconds;
+                if (!double.IsNaN(stNow) && len > 0 && GreenTimes.Get(KeyFor(ReadInt("SessionNum", fallback: Current.SessionNum))) is double g0 && stNow >= g0)
+                    tr = len - (stNow - g0);
+            }
+            catch { }
+            float pace = 0f, pct = -1f;
+            try { var l = Current.Leader; if (l != null) { pace = l.BestLapTime > 30 ? l.BestLapTime : l.LastLapTime; pct = l.LapDistPct; } } catch { }
+            if (!double.IsNaN(tr) && pace > 30 && pct >= 0 && tr < pace * (1 - pct)) return 0x4u | 0x2u;
+        }
+        return 0x4u;
+    }
     /// <summary>True while watching a replay (iRacing's IsReplayPlaying).</summary>
     public bool IsReplay { get; private set; }
     /// <summary>Every iRacing class in the session and the label it got, e.g.
@@ -275,14 +311,20 @@ public sealed partial class RaceStateService : IDisposable
                 var car = CarCatalog.Find(d.CarID, d.CarPath);
                 var cls = ClassDetection.Resolve(d.CarClassID, d.CarClassShortName, FixMojibake(d.UserName), CleanCarName(d.CarScreenName), car?.ClassLabel);
                 classMap.Add($"{d.CarClassID} '{d.CarClassShortName}' -> {cls.Label} ({cls.Source})");
+                // 2026-11-06 (league roster): a league's own display name for this driver; then the abbreviation and
+                // initials are left empty so NameFormat builds them from the roster name
+                string? rosterName = null;
+                try { rosterName = NameOverride?.Invoke(FixMojibake(d.UserName), d.CarNumber ?? ""); } catch { }
                 driverByCarIdx[d.CarIdx] = new DriverStatic(
-                    Name: FixMojibake(d.UserName),
+                    // 2026-11-06 (#921): iRacing's duplicate-name digits ("Pedro Oliveira12") dropped at the source,
+                    // so every graphic (tower, cards, booth, full-name plates) shows the clean name
+                    Name: rosterName ?? NoDupDigits(FixMojibake(d.UserName)),
                     // iRacing's server-built AbbrevName / Initials can arrive garbled AND
                     // cut mid-character (logged: "LÃ³pez, Ã" for "Òscar López López"),
                     // which can't be repaired. When garbled, drop it so NameFormat builds
                     // "Ò. LÓPEZ" from the (correct) full UserName instead.
-                    Abbrev: LooksGarbled(d.AbbrevName) ? string.Empty : FixMojibake(d.AbbrevName),
-                    Initials: LooksGarbled(d.Initials) ? string.Empty : FixMojibake(d.Initials),
+                    Abbrev: rosterName != null || LooksGarbled(d.AbbrevName) ? string.Empty : NoDupDigits(FixMojibake(d.AbbrevName)),
+                    Initials: rosterName != null || LooksGarbled(d.Initials) ? string.Empty : FixMojibake(d.Initials),
                     CarNumber: d.CarNumber ?? string.Empty,
                     CarName: CarNameFor(d.CarScreenName, car),
                     CarBrand: BrandFor(d.CarScreenName, car),
@@ -486,6 +528,16 @@ public sealed partial class RaceStateService : IDisposable
             s = updated;
         }
         var sessionFlagsBits = data.GetBitField(d.SessionFlags);
+        // 2026-11-06 (#882, Angelo: "it never knew when the last lap was - no white flag, no chequered flag"): a replay file
+        // carries no session flags (SessionFlags reads 0 all the way through), so in a replay with no flags at all they are
+        // worked out: chequered from SessionState 5/6, the white flag for the leader's final lap (lap races: one lap left;
+        // timed races: less than one of the leader's laps left on the clock), green while racing
+        try
+        {
+            if (sessionFlagsBits == 0 && d.IsReplayPlaying != null && data.GetBool(d.IsReplayPlaying))
+                sessionFlagsBits = ReplayFlagsFallback();
+        }
+        catch { }
         var camCarIdx        = data.GetInt(d.CamCarIdx);
         var currentLap       = data.GetInt(d.Lap);
         var sessionTimeRemain= data.GetDouble(d.SessionTimeRemain);
@@ -854,8 +906,15 @@ public sealed partial class RaceStateService : IDisposable
         {
             double stNow = data.GetDouble(d.SessionTime);
             string gk = KeyFor(liveSessionNum);
+            // 2026-11-06 (#935): the green is saved only when it is SEEN happen - the previous tick was still before the
+            // green and less than 2 s earlier on the session clock (a replay jump from the grid into the race used to save
+            // the jump's landing time as "the green": the race clock then jumped from 39:11 to 44:59), and a green time
+            // already on file (from the live race) is never overwritten by a replay
+            bool contiguous = greenPrevSt >= 0 && stNow >= greenPrevSt && stNow - greenPrevSt < 2.0;
             if (sessionState is >= 1 and <= 3) { greenSeenKey = gk; greenPending = true; }
-            else if (sessionState == 4 && greenPending && greenSeenKey == gk) { greenPending = false; GreenTimes.Save(gk, stNow); }
+            else if (sessionState == 4 && greenPending && greenSeenKey == gk && greenPrevState is >= 1 and <= 3 && contiguous && GreenTimes.Get(gk) == null) { greenPending = false; GreenTimes.Save(gk, stNow); }
+            else if (sessionState == 4) greenPending = false;
+            greenPrevSt = stNow; greenPrevState = sessionState;
             if (sessionState >= 4 && GreenTimes.Get(gk) is double g0 && stNow >= g0)
                 sessionTimeRemain = Math.Max(0, sessionLen - (stNow - g0));
         }
@@ -939,7 +998,10 @@ public sealed partial class RaceStateService : IDisposable
 
         float F2(Driver d) => d.CarIdx >= 0 && d.CarIdx < f2TimeBuf.Length ? f2TimeBuf[d.CarIdx] : -1f;
         float Est(Driver d) => d.CarIdx >= 0 && d.CarIdx < estTimeBuf.Length ? estTimeBuf[d.CarIdx] : -1f;
-        float ClassLap(Driver d) => s.Drivers.TryGetValue(d.CarIdx, out var st) && st.ClassEstLap > 0 ? st.ClassEstLap : 0f;
+        // 2026-11-06 (#936): a saved replay file reports CarClassEstLapTime = 1.0 and CarIdxEstTime = 0 for every car - the
+        // gap maths turned "one lap apart on the road" into "+1.0 s" (tower showed +1.0 / +2.0, the battle card a frozen
+        // 1.00 "holding steady"). A class lap estimate under 30 s is not a lap time; no estimate = use the road + pace.
+        float ClassLap(Driver d) => s.Drivers.TryGetValue(d.CarIdx, out var st) && st.ClassEstLap > 30 ? st.ClassEstLap : 0f;
         // Race F2 is "time behind the overall leader": 0 is only real for the overall leader.
         bool RaceF2Ok(Driver d) { float f = F2(d); return !replay && (f > 0f || (f == 0f && d.Position == 1)); }
         bool OnRoad(Driver d) => d.IsConnected && LiveGap.Progress(d.CurrentLap, d.LapDistPct) is double;
@@ -955,7 +1017,7 @@ public sealed partial class RaceStateService : IDisposable
             float lapT = ClassLap(behind);
             if (lapT <= 0) lapT = paceFor(behind.BestLapTime, behind.LastLapTime) ?? 0f;
             float ea = Est(ahead), eb = Est(behind);
-            if (lapT > 0 && ea >= 0 && eb >= 0)
+            if (lapT > 30 && ea > 0 && eb > 0)
             {
                 double g = (ahead.CurrentLap - behind.CurrentLap) * (double)lapT + (ea - eb);
                 if (g > 0) return g;
@@ -1287,6 +1349,10 @@ public sealed partial class RaceStateService : IDisposable
         while (i < span.Length && (char.IsDigit(span[i]) || span[i] == '.')) i++;
         return i > 0 && double.TryParse(span[..i], System.Globalization.CultureInfo.InvariantCulture, out var pct) && pct > 0;
     }
+
+    /// <summary>2026-11-06 (#921): "Pedro Oliveira12" -> "Pedro Oliveira", "Oliveira12, P" -> "Oliveira, P".</summary>
+    static string NoDupDigits(string s) =>
+        string.IsNullOrEmpty(s) ? s : System.Text.RegularExpressions.Regex.Replace(s, @"(?<=\p{L})\d+(?=\s*(,|$))", "").Trim();
 
     /// <summary>
     /// 2026-10-18: accented driver names arrived garbled ("Á. LÓPEZ" shown as

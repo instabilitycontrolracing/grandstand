@@ -199,6 +199,10 @@ public static partial class StoryDirector
     public static bool NoCardsInBattleWhenDriving = true;
     public const double BattleStaleMs = 60000;
     static bool hushed;
+    // 2026-11-06 (Angelo: "the car contact card shows up too frequently in the middle of battles"): contact cards only in
+    // a calm moment (never pushed through a fight), at least 3 minutes apart, and only the latest contact waits in line
+    static double lastContactMs = double.NegativeInfinity;
+    const double ContactGapMs = 180000;
 
     /// <summary>True while a card is on screen (including its exit).</summary>
     public static bool Visible => Current != StoryKind.None;
@@ -210,6 +214,16 @@ public static partial class StoryDirector
         if (k == StoryKind.CarContact) ContactShown = RaceDiary.Contacts.Count > 0 ? RaceDiary.Contacts[^1] : null;
         ExitAtMs = nowMs + (k == StoryKind.DriverOfDay ? 12000 : CardMs) - ExitMs;
         StorySound.Play(StorySound.CueFor(k));
+    }
+
+    /// <summary>2026-11-06 (Angelo: "every button on the live view page needs to work"): a button that plays something into the
+    /// right-hand column (team radio, spotter, race control, a viewer card...) first sends the story card on screen on its way,
+    /// so what you pressed is seen straight away. It just exits early (no retry later).</summary>
+    public static void Dismiss(double nowMs)
+    {
+        OverlayLog.Write($"story: clear the way asked ({Current}, exit in {(ExitAtMs - nowMs) / 1000:0.0} s)");
+        if (Current == StoryKind.None || nowMs >= ExitAtMs) return;
+        ExitAtMs = nowMs; pinned = false; bowedOut = false;
     }
 
     /// <summary>2026-10-27 (#393): a card that needs longer than the usual time (the paged GO FAST Fastest Laps: about 4 s
@@ -255,6 +269,7 @@ public static partial class StoryDirector
     static int offsAtLimitsCard;
     static double lastLimitsMs = double.NegativeInfinity;
     static readonly Dictionary<string, float> classBest = new();
+    static int fastestJumpSeen = -1;
     static double lastFastestQueuedMs = double.NegativeInfinity;
     static bool fastestNow;
     static double fastestAtMs = double.NegativeInfinity;   // 2026-10-27 (#338): when the take-over was set (stale after a battle)
@@ -266,6 +281,7 @@ public static partial class StoryDirector
     static void Enqueue(StoryKind k, double nowMs, int prio, string weather = "", RaceDiary.Contact? ct = null)
     {
         if (k != StoryKind.CarContact && queue.Any(q => q.Kind == k)) return;    // already in line
+        if (k == StoryKind.CarContact && prio < 3) queue.RemoveAll(q => q.Kind == StoryKind.CarContact && q.Prio < 3);   // 2026-11-06: only the latest contact waits
         queue.Add(new Queued(k, nowMs, weather, ct, prio));
     }
 
@@ -302,8 +318,13 @@ public static partial class StoryDirector
         if (RaceDiary.TotalOffs - offsAtLimitsCard >= 15 && RaceDiary.TotalOffs >= 3 && nowMs - lastLimitsMs >= 600000) { offsAtLimitsCard = RaceDiary.TotalOffs; lastLimitsMs = nowMs; Enqueue(StoryKind.Limits, nowMs, 2); }
         // 2026-10-25 (Angelo: "the fastest lap one hasn't come on when a new fastest lap change occurs"): a new fastest lap
         // in any class puts the GoFast Fastest Laps card in line (not just its turn in the rotation), at most every 3 min
+        // 2026-11-06 (#932): a "new fastest lap" card came up on the formation lap right after a replay jump - after any
+        // jump the class bests are learned again before anything counts as new, and never before the green
+        int jcF = ApexHUD.Native.Common.ReplayState.JumpCount;
+        if (jcF != fastestJumpSeen) { fastestJumpSeen = jcF; classBest.Clear(); }
         foreach (var cl in snap.ClassLeaderboard)
         {
+            if (snap.SessionState is < 4) { classBest.Remove(cl.Name); continue; }
             float best = float.MaxValue;
             foreach (var d in cl.Drivers) if (d.BestLapTime > 1 && d.BestLapTime < best) best = d.BestLapTime;
             if (best == float.MaxValue) continue;
@@ -359,7 +380,8 @@ public static partial class StoryDirector
         bool pitExitDue = nowMs - pitExitAtMs < 60000 && !snap.Flags.Red && !snap.Flags.Checkered && !PresentationState.NewCardsHeld;   // #510
 
         // #338: driving live in a battle -> no cards at all; when it ends, anything that waited too long is dropped
-        bool hush = NoCardsInBattleWhenDriving && battleActive && ApexHUD.Native.Common.DrivingState.DrivingLive;
+        bool hush = (NoCardsInBattleWhenDriving && battleActive && ApexHUD.Native.Common.DrivingState.DrivingLive)
+                    || PresentationState.CloseFight;   // 2026-11-06 (#909): cars within 0.35 s - cards get out of the way
         if (hush != hushed)
         {
             hushed = hush;
@@ -437,11 +459,14 @@ public static partial class StoryDirector
         if (PresentationState.ShotSettling) { WhyNot = $"{queue.Count} waiting - the camera just cut"; return; }
 
         // the front of the line: highest priority, then oldest
-        var next = queue.OrderByDescending(q => q.Prio).ThenBy(q => q.At).First();
+        bool contactRested = nowMs - lastContactMs >= ContactGapMs;
+        var cands = queue.Where(q => contactRested || q.Kind != StoryKind.CarContact || q.Prio >= 3).OrderByDescending(q => q.Prio).ThenBy(q => q.At).ToList();
+        if (cands.Count == 0) { WhyNot = $"{queue.Count} waiting - contact cards rest 3 min between"; return; }
+        var next = cands[0];
         // 2026-10-25 (Angelo: "I have not seen the Trading Paints card in a while"): a battle that never ends held every
         // card for 4 minutes. Now: a DQ waits at most 20 s, a contact 45 s, anything else 90 s, then plays through the fight
         double holdMax = next.Prio >= 3 ? 20000 : next.Kind == StoryKind.CarContact ? 45000 : 90000;
-        bool overdue = nowMs - next.At >= Math.Min(HoldMaxMs, holdMax);
+        bool overdue = !(next.Kind == StoryKind.CarContact && next.Prio < 3) && nowMs - next.At >= Math.Min(HoldMaxMs, holdMax);   // 2026-11-06: a contact never plays through a fight
         if (nowMs - lastEndMs < BackToBackGapMs) { WhyNot = $"{queue.Count} waiting - breather between cards"; return; }
         if (!calm && !overdue) { WhyNot = $"{queue.Count} waiting ({next.Kind}) - holding for the battle to end"; return; }
         double calmFor = calm ? nowMs - quietSinceMs : double.MaxValue;
@@ -455,6 +480,7 @@ public static partial class StoryDirector
     static void Start(StoryKind k, double nowMs)
     {
         Current = k; StartedMs = nowMs; ExitAtMs = nowMs + CardMs - ExitMs; pinned = false; exitCued = false;
+        if (k == StoryKind.CarContact) lastContactMs = nowMs;
         OverlayLog.Write($"story: playing {k} ({queue.Count} more waiting)");
         dueSinceMs = eventDueSinceMs = -1;
         StorySound.Play(StorySound.CueFor(k));
@@ -547,6 +573,10 @@ public static partial class StoryDirector
 
     /// <summary>Why no story card can show right now (logged every 30 s for tuning).</summary>
     public static string WhyNot = "";
+    /// <summary>2026-11-06 (#869): the cards waiting in line, front first (for the commentator's booth).</summary>
+    public static List<StoryKind> Upcoming { get { try { return queue.OrderByDescending(q => q.Prio).ThenBy(q => q.At).Select(q => q.Kind).ToList(); } catch { return new(); } } }
+    /// <summary>The next routine card in the rotation.</summary>
+    public static StoryKind NextRoutine { get { try { return Rotation[rot % Rotation.Length]; } catch { return StoryKind.None; } } }
 }
 
 /// <summary>

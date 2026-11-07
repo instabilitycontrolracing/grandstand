@@ -23,6 +23,7 @@
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+    <ApplicationIcon>grandstand.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,6 +41,8 @@
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
     <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="2.88.8" />
+    <!-- 2026-11-05: the app window (AppWindow.cs) shows the control page in Edge WebView2 -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
   </ItemGroup>
 
   <!-- Bundled broadcast assets, copied next to the exe so the reused renderers
@@ -50,6 +53,10 @@
     <Content Include="control\**\*.*" Link="control\%(RecursiveDir)%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="grandstand.ico"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
 
   <!-- 2026-10-26 (#30): Spout2 (BSD-2 licence, leadedge/Spout2 2.007.018) for the OBS stream output -->

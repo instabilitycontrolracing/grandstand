@@ -86,7 +86,7 @@ public sealed class ViewerCardsRenderer : IDisposable
             while (pending.Count > ViewerFeed.MaxQueue) pending.RemoveFirst();
         }
         string why = "";
-        bool clear = ForceClear || ScreenClear(snap, out why);
+        bool clear = ForceClear || ViewerFeed.TestBoost || ScreenClear(snap, out why);   // 2026-11-06: Test buttons play now
         WhyWaiting = clear ? "" : why;
 
         if (cur != null)

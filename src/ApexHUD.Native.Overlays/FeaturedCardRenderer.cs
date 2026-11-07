@@ -19,7 +19,10 @@ namespace ApexHUD.Native.Overlays;
 /// </summary>
 public sealed class FeaturedCardRenderer : IDisposable
 {
-    public const float CardWidth = 720f;
+    // 2026-11-06 (#942, Angelo: "I want the driver card to have the car image on it"): a car column (the car's own paint,
+    // side view) between the name and the timing - the card grew by its width
+    public const float ColCar = 230f;
+    public const float CardWidth = 720f + ColCar;
     public const float CardHeight = 189f; // 210 − 10% (21 px), trimmed 10.5 px off top & bottom
 
     // Legacy CSS grid-template-columns: 110px 1fr 200px 110px (sum 420 + flex).
@@ -206,6 +209,35 @@ public sealed class FeaturedCardRenderer : IDisposable
         // alpha fade top/bottom so the line floats inside the column.
         DrawColumnHairline(c, card, card.Right - ColBrand - ColPerf, alpha);
         DrawColumnHairline(c, card, card.Right - ColBrand, alpha);
+        if (featured != null) DrawCarImage(c, card, featured, alpha);
+    }
+
+    // #942: the car in its own paint (LiveryArt - the same pictures the onboard and pre-race cards use), side view,
+    // in its column; nothing is drawn until the picture is ready (it never blocks a frame)
+    void DrawCarImage(SKCanvas c, SKRect card, Driver d, float alpha)
+    {
+        var img = LiveryArt.Get(d);
+        if (img == null || img.Width <= 0 || img.Height <= 0) return;
+        float colL = card.Right - ColBrand - ColPerf - ColCar, colR = card.Right - ColBrand - ColPerf;
+        float visBottom = card.Bottom - 10.5f;
+        float maxW = ColCar - 16f, maxH = visBottom - card.Top - 30f;
+        float sc = Math.Min(maxW / img.Width, maxH / img.Height);
+        float w = img.Width * sc, h = img.Height * sc;
+        float cx = (colL + colR) / 2f, cy = (card.Top + visBottom) / 2f + 6f;
+        var dst = new SKRect(cx - w / 2f, cy - h / 2f, cx + w / 2f, cy + h / 2f);
+        // a soft class-colour floor glow under the car
+        var classColor = ParseHex(string.IsNullOrEmpty(d.ClassColor) ? BroadcastPalette.Class(d.ClassName) : d.ClassColor);
+        using (var floorSh = SKShader.CreateRadialGradient(new SKPoint(cx, dst.Bottom - 4f), w * 0.55f,
+                   new[] { classColor.WithAlpha((byte)(60 * alpha)), classColor.WithAlpha(0) }, new[] { 0f, 1f }, SKShaderTileMode.Clamp))
+        using (var floor = new SKPaint { IsAntialias = true, Shader = floorSh })
+        {
+            c.Save(); c.Scale(1f, 0.22f, cx, dst.Bottom - 4f);
+            c.DrawCircle(cx, dst.Bottom - 4f, w * 0.55f, floor);
+            c.Restore();
+        }
+        using var p = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.High, Color = SKColors.White.WithAlpha((byte)(255 * alpha)) };
+        c.DrawImage(img, dst, p);
+        DrawColumnHairline(c, card, colL, alpha);
     }
 
     void DrawColumnHairline(SKCanvas c, SKRect card, float x, float alpha)
@@ -297,7 +329,7 @@ public sealed class FeaturedCardRenderer : IDisposable
     void DrawIdentity(SKCanvas c, SKRect card, RaceSnapshot snap, Driver d, float alpha, double elapsedMs)
     {
         float left = card.Left + ColPosition + 4f;
-        float right = card.Right - ColBrand - ColPerf - 12f;
+        float right = card.Right - ColBrand - ColPerf - ColCar - 12f;
         float top = card.Top + 11.5f;
         float bottom = card.Bottom - 11.5f;
 

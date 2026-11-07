@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Text;
 using ApexHUD.Native.Data;
@@ -41,6 +41,9 @@ namespace ApexHUD.Native.GpuHost
         {
             // a TV-stream duck left on by a crash mid-intro is put back (2026-10-23)
             System.Threading.Tasks.Task.Run(() => ApexHUD.Native.Overlays.GameDuck.Recover());
+            // 2026-11-05: Stream Deck / button box: "Grandstand.exe --do onair" sends one command to the running copy and exits
+            for (int i = 0; i < args.Length - 1; i++)
+                if (string.Equals(args[i], "--do", StringComparison.OrdinalIgnoreCase)) return Integrations.Do(args[i + 1]);
             // Offline render of the grid spotlight hero cards (no window/GL) for design review.
             if (args.Any(a => string.Equals(a, "--hero-shot", StringComparison.OrdinalIgnoreCase)))
                 return HeroShot.Run();
@@ -59,6 +62,8 @@ namespace ApexHUD.Native.GpuHost
             bool demo = args.Any(a => string.Equals(a, "--demo", StringComparison.OrdinalIgnoreCase));
             bool demoGrid = args.Any(a => string.Equals(a, "--demo-grid", StringComparison.OrdinalIgnoreCase));
             if (demoGrid) demo = true;   // force the canned PreRace feed so the grid + hero cycle show
+            // 2026-11-05: one Grandstand at a time - starting it again just brings the app window forward
+            if (!AppWindow.ClaimSingleInstance()) return 0;
 
             int autoQuitSeconds = 0;
             for (int i = 0; i < args.Length - 1; i++)
@@ -127,7 +132,17 @@ namespace ApexHUD.Native.GpuHost
             // custom cards from the card builder (2026-10-24): read once here, then only when the control app saves one
             foreach (var problem in ApexHUD.Native.Overlays.CustomCards.LoadFolder()) Log("custom card skipped: " + problem);
             ApexHUD.Native.Overlays.CustomCards.ReadVar = (name, index) => raceState.ReadVar(name, index);
+            ApexHUD.Native.Overlays.CustomCards.ReadSession = path => DataCatalog.Session(raceState, path);   // 2026-11-05: any session info value
+            Integrations.Init(Log);   // 2026-11-05: Garage 61, Discord, league standings (card data G61.* / League.*)
+            VerticalClip.Init(raceState, Log);   // 2026-11-06: one-button vertical clips (OBS replay buffer + ffmpeg)
+            YouTubeUpload.Init(Log);   // 2026-11-06: the highlight reel to YouTube
+            HueLights.Init(raceState, Log);   // 2026-11-06: room lights follow the flags (asleep until switched on)
+            Bets.Init(raceState, Log);   // 2026-11-06: viewer bets (asleep until switched on)
+            ProducerDesk.Init(raceState, Log);   // 2026-11-06: producer desk (history, replays, booth, on-demand graphics, roster)
+            AppHealth.Init(Log);   // 2026-11-06: crash files + update check
+            LiveSound.Init();      // 2026-11-06: the Live view plays the sample race's sound in the app window
             using var compositor = new OverlayCompositor(raceState, demo, demoGrid);
+            ProducerDesk.OnScreen = () => compositor.CurrentSnapshot;   // 2026-11-06: on-demand cards in the sample race too
             // replay director (2026-10-24): asleep until switched on in the control app
             using var director = new ReplayDirector(raceState);
 
@@ -138,7 +153,10 @@ namespace ApexHUD.Native.GpuHost
             using var control = new ControlServer(raceState, compositor, director, reel);
             control.Start();
             // StartPhotoBooth(); - retired 2026-10-27 (the livery picture is used instead)
-            if (args.Any(a => string.Equals(a, "--control", StringComparison.OrdinalIgnoreCase)))
+            // 2026-11-05: Grandstand is a desktop app - its own window with the control page inside (closing it quits)
+            if (!args.Any(a => string.Equals(a, "--no-window", StringComparison.OrdinalIgnoreCase)) && autoQuitSeconds == 0)
+                AppWindow.Start(Log);
+            else if (args.Any(a => string.Equals(a, "--control", StringComparison.OrdinalIgnoreCase)))
             {
                 try { Process.Start(new ProcessStartInfo(ControlServer.Url) { UseShellExecute = true }); } catch { }
             }
@@ -173,6 +191,8 @@ namespace ApexHUD.Native.GpuHost
                 Thread.Sleep(50);
 
                 long nowMs = sw.ElapsedMilliseconds;
+
+                if (AppWindow.QuitRequested) { Log("quit (app window closed)"); break; }
 
                 if (autoQuitSeconds > 0 && nowMs >= autoQuitSeconds * 1000L)
                 {
@@ -231,6 +251,10 @@ namespace ApexHUD.Native.GpuHost
                 // rotations, ~60/s during a transition) and roll a fresh report.
                 if (nowMs - lastWriteMs >= 5000)
                 {
+                    DataCatalog.RememberIfLive(raceState);   // 2026-11-05: the card builder's picker remembers iRacing's values
+                    try { Integrations.TickG61(raceState); Integrations.TickG61Field(raceState); Integrations.TickDiscord(raceState); } catch { }
+                    try { reel.AutoTick(); } catch (Exception ex) { Log("reel auto: " + ex.Message); }
+                    try { VerticalClip.Tick(); } catch (Exception ex) { Log("clip tick: " + ex.Message); }
                     long present = host.PresentedFrames;
                     double secs = (nowMs - lastWriteMs) / 1000.0;
                     double pps = secs > 0 ? (present - lastPresent) / secs : 0;
@@ -248,7 +272,7 @@ namespace ApexHUD.Native.GpuHost
 
             WriteReport(host.CopyGaps(), host.PresentedFrames, sw.Elapsed.TotalSeconds,
                         running: false, target: targetTitle);
-            Log(host.QuitRequested ? "quit (Ctrl+Shift+Q)" : "quit");
+            Log(host.QuitRequested ? "quit (Ctrl+Shift+Q)" : "quit"); AppWindow.Close();
             return 0;
         }
 

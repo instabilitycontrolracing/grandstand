@@ -250,8 +250,16 @@ public static class ViewerFeed
     }
 
     /// <summary>The sample events behind the control app's Test buttons (POST /api/viewer/test).</summary>
+    /// <summary>2026-11-06 (Angelo: every Live view button must work): when a Test button was pressed (TickCount64). For
+    /// <see cref="TestBoostMs"/> after it the viewer cards don't wait for a clear screen (a battle, a story card...), so the
+    /// sample you asked for plays now. Real viewer events still wait their turn.</summary>
+    public static long TestAtTicks = long.MinValue / 2;
+    public const long TestBoostMs = 30000;
+    public static bool TestBoost => Environment.TickCount64 - Interlocked.Read(ref TestAtTicks) < TestBoostMs;
+
     public static Result Test(string? type)
     {
+        Interlocked.Exchange(ref TestAtTicks, Environment.TickCount64);
         string t = (type ?? "superchat").Trim().ToLowerInvariant();
         return t switch
         {

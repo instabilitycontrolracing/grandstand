@@ -147,6 +147,7 @@ public sealed partial class PreRaceCards
             case Kind.Weather:      PanelWeather(c, r, shape, snap, a, cl, cw, wm, right); break;
             case Kind.RaceInfo:     PanelRaceInfo(c, r, snap, a, cl, cw); break;
             case Kind.Poles:        PanelPoles(c, r, snap, a, cl, cw, right); break;
+            case Kind.Watch:        PanelWatch(c, r, snap, a, cl, cw, right); break;
             case Kind.PartnerAB:    PanelAB(c, r, a, cw); break;
             case Kind.TrackFacts:   PanelTrack(c, r, snap, a, cl, cw, right); break;
             case Kind.Driver:       PanelDriver(c, r, shape, snap, a, cl, cw, right); break;
@@ -418,6 +419,34 @@ public sealed partial class PreRaceCards
             TextC(c, NameFormat.Broadcast(d), x, y + 118, Fonts.CormorantGaramond.Bold, 72, Txt, ra, cw, 26);
             TextC(c, Lap(d.QualifyTime) + "    #" + d.CarNumber, x, y + 160, Fonts.Inter.SemiBold, 28, Txt2, ra, cw);
             if (i < poles.Count - 1) HLineC(c, x, cw / 2 * 0.7f, y + 186, ra);
+        }
+    }
+
+    // ---------------------------------------------------------------- DRIVERS TO WATCH (2026-11-06)
+    void PanelWatch(SKCanvas c, SKRect r, RaceSnapshot s, float a, float cl, float cw, bool right)
+    {
+        float cx = cl + cw / 2;
+        float hk = K(0.0, 0.45);
+        c.Save();
+        c.ClipRect(new SKRect(cx - (cw / 2 + 20) * hk, r.Top, cx + (cw / 2 + 20) * hk, r.Bottom));
+        Headline(c, "DRIVERS TO WATCH", cx, r.Top + 126, cw, 88, a, center: true);
+        c.Restore();
+        HLineC(c, cx, 90 * K(0.35, 0.35), r.Top + 152, a, Gold.WithAlpha(220), 3);
+        var picks = DriversToWatch.For(s);
+        for (int i = 0; i < Math.Min(3, picks.Count); i++)
+        {
+            var p = picks[i];
+            float k = Ease((float)Math.Clamp((cardLocal - 0.5 - i * 0.25) / 0.5, 0, 1));
+            if (k <= 0) continue;
+            float y = r.Top + 200 + i * 196, x = cx + (1 - k) * 160 * (right ? -1 : 1), ra = a * k;
+            var cc = SKColor.TryParse(p.ClassColor.StartsWith('#') ? p.ClassColor : "#" + p.ClassColor, out var pc) ? pc : Gold;
+            using (var bar = new SKPaint { IsAntialias = true, Color = cc.WithAlpha((byte)(255 * ra)) })
+                c.DrawRoundRect(new SKRect(x - 46, y + 4, x + 46, y + 9), 2.5f, 2.5f, bar);
+            LabelC(c, (p.Tag + " · " + ClassLogo.DisplayName(p.ClassName)).ToUpperInvariant(), x, y + 40, 19, Gold, ra);
+            TextC(c, p.Name + "   #" + p.Number, x, y + 100, Fonts.CormorantGaramond.Bold, 58, Txt, ra, cw, 24);
+            TextC(c, p.Value, x, y + 140, Fonts.Inter.Bold, 30, Gold, ra, cw);
+            TextC(c, p.Reason, x, y + 174, Fonts.Inter.Medium, 21, Txt2, ra, cw, 14);
+            if (i < Math.Min(3, picks.Count) - 1) HLineC(c, x, cw / 2 * 0.7f, y + 190, ra);
         }
     }
 
@@ -723,10 +752,21 @@ public sealed partial class PreRaceCards
                 var img = mt.Feathered ?? tlogo;
                 var b = flat.Bounds;
                 float lk = K(1.4, 1.2);
-                // the plane is tilted: put the logo where the infield's centre lands on screen, sized by the ground's scale there
-                var pc = persp.MapPoint(b.MidX, b.MidY); var pr = persp.MapPoint(b.MidX + 100, b.MidY);
+                // 2026-11-06 (Angelo: "the Watkins Glen logo in the wrong place" on the track intro): the middle of the map's
+                // box can be ON the line (Watkins Glen's Boot) - use the opener's roomiest open spot in the infield instead,
+                // sized to fit it; the box middle only when the layout has no room inside
+                var hole = GridIntro.Hole((mb ?? s.TrackRawName ?? "") + "|card|" + (int)(100f * img.Width / img.Height), path, map.Width, map.Height, (float)img.Width / img.Height);
+                var centre = new SKPoint(b.MidX, b.MidY);
+                float fitW = b.Width * 0.42f, fitH = b.Height * 0.4f;
+                if (hole is SKRect hr && hr.Width > 0)
+                {
+                    centre = toPlane.MapPoint(hr.MidX, hr.MidY);
+                    fitW = Math.Min(fitW, hr.Width * sc * 0.92f); fitH = Math.Min(fitH, hr.Height * sc * 0.92f);
+                }
+                // the plane is tilted: put the logo where that spot lands on screen, sized by the ground's scale there
+                var pc = persp.MapPoint(centre.X, centre.Y); var pr = persp.MapPoint(centre.X + 100, centre.Y);
                 float depth = SKPoint.Distance(pc, pr) / 100f;
-                float ls = Math.Min(b.Width * 0.42f / img.Width, b.Height * 0.4f / img.Height) * (1.2f - 0.2f * lk) * depth;
+                float ls = Math.Min(fitW / img.Width, fitH / img.Height) * (1.2f - 0.2f * lk) * depth;
                 float lw = img.Width * ls, lh = img.Height * ls;
                 using var lp = new SKPaint { IsAntialias = true, FilterQuality = SKFilterQuality.High, Color = SKColors.White.WithAlpha((byte)(255 * a * lk * (1 - walkZoomAmt))) };
                 c.DrawBitmap(img, new SKRect(pc.X - lw / 2, pc.Y - 14 - lh / 2, pc.X + lw / 2, pc.Y - 14 + lh / 2), lp);
@@ -853,7 +893,13 @@ public sealed partial class PreRaceCards
             {
                 float x0 = colL + i * cw2;
                 using (var lp = P(Fonts.Inter.Bold, 13, Txt3, sa)) TextTracked.Draw(c, lp, cells[i].L, x0, cy, 2.2f);   // #340: was 11
-                using (var vp = P(Fonts.BarlowCondensed.ExtraBold, 40, Txt, sa)) c.DrawText(cells[i].V, x0, cy + 42, vp);
+                // 2026-11-06 (#926): "RIGHT-HANDER" ran into "42 MPH" - shrink a value to fit its own column
+                using (var vp = P(Fonts.BarlowCondensed.ExtraBold, 40, Txt, sa))
+                {
+                    float room = cw2 - 30f, wv = vp.MeasureText(cells[i].V);
+                    if (wv > room && wv > 0) vp.TextSize = Math.Max(20f, 40f * room / wv);
+                    c.DrawText(cells[i].V, x0, cy + 42, vp);
+                }
                 if (i > 0) using (var sep = new SKPaint { Color = new SKColor(255, 255, 255, (byte)(30 * sa)) }) c.DrawRect(x0 - 14, cy - 12, 1, 58, sep);
             }
         }

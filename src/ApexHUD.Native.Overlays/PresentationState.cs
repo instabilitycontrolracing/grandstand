@@ -1,4 +1,4 @@
-﻿using ApexHUD.Native.Common;
+using ApexHUD.Native.Common;
 
 namespace ApexHUD.Native.Overlays;
 
@@ -26,6 +26,23 @@ public static class PresentationState
     /// battle card. Written by <see cref="BattleCardWindow"/> every frame from
     /// <c>renderer.IsActive</c>; pulled lock-free by every other consumer.</summary>
     public static bool IsBattleActive { get; set; }
+    // 2026-11-06 (#873, Angelo: "so many battles I'm not seeing the timing tower"): after 70 s of battle look the tower
+    // takes over for 10 s (battle card steps aside), then every 80 s while the fights go on
+    static long towerPulseUntil, nextTowerPulse = long.MaxValue;
+    public static bool TowerPulse => Environment.TickCount64 < Interlocked.Read(ref towerPulseUntil) && !CloseFight && !ThreeWay;
+    /// <summary>2026-11-06 (#909): the camera car is within 0.35 s of a car ahead or behind - every card gets out of the way.</summary>
+    public static volatile bool CloseFight;
+    /// <summary>2026-11-06 (#908): three or more cars within 1 s around the camera car - the tower stays away.</summary>
+    public static volatile bool ThreeWay;
+    /// <summary>The battle card's own state, even while the tower has its turn.</summary>
+    public static volatile bool BattleRaw;
+    public static void TickTowerPulse(bool battleWanted)
+    {
+        long now = Environment.TickCount64;
+        if (!battleWanted) { if (!TowerPulse) nextTowerPulse = now + 70000; return; }
+        if (nextTowerPulse == long.MaxValue) nextTowerPulse = now + 70000;
+        if (now >= nextTowerPulse) { Interlocked.Exchange(ref towerPulseUntil, now + 10000); nextTowerPulse = now + 80000; }
+    }
     /// <summary>A callout (fastest lap) is on screen: story cards wait for it, so two graphics never stack (2026-10-24).</summary>
     public static bool CalloutActive { get; set; }
 
@@ -79,7 +96,14 @@ public static class PresentationState
     // have no formation lap (and the leader-lap latch may never fire there), so
     // bypass it for non-race sessions and show the tower/featured immediately.
     // 2026-10-24 (Angelo): the tower shows on lap 1 too - live places, no times until the line.
-    public static bool TowerVisible      => IsRacing && !IsBattleActive && !BumperBattleStyle && !OnboardActive;
+    /// <summary>2026-11-05: set by Grandstand's card-editor preview (render thread, only while no race is live and only for the
+    /// moment it draws the preview) so the tower and the driver card draw their on-air look for the preview.</summary>
+    public static bool PreviewForce { get; set; }
+    public static bool TowerVisible      => PreviewForce || (IsRacing && (!IsBattleActive || TowerInBattle) && !BumperBattleStyle && !OnboardActive);
+    /// <summary>2026-11-06 (#941, Angelo: "in two way battles for battle mode, not onboard, I want the timing tower to be
+    /// present"): a two-car fight keeps the tower (it moves down under the battle ticker); a three-way fight still clears
+    /// it (#908 - it overlapped), and onboards never have it.</summary>
+    public static bool TowerInBattle     => IsRacing && IsBattleActive && !ThreeWay && !OnboardActive;
     /// <summary>The tower's lane is in use (racing, no battle) - the class rotation keeps running even while an
     /// onboard shot has the tower faded off, so it doesn't restart from OVERALL after every onboard.</summary>
     public static bool TowerLaneActive   => IsRacing && !IsBattleActive;
@@ -130,8 +154,9 @@ public static class PresentationState
     /// <summary>2026-10-27 (#423, Angelo: "when the replays happen make there be no overlay, then it comes back smoothly"):
     /// 0 = graphics on, 1 = hidden for a replay (eased by the host; the replay wipe and its REPLAY tag stay).</summary>
     public static float ReplayHideK { get; set; }
-    public static bool FeaturedVisible   => FeaturedFree && Environment.TickCount64 < featOpenUntil;
-    static bool FeaturedFree => IsRacing && (Lap1Complete || !IsRaceSession) && !IsBattleActive && !BumperBattleStyle && !StoryDirector.Visible && !PitStopShowing;
+    public static bool FeaturedVisible   => PreviewForce || (FeaturedFree && Environment.TickCount64 < featOpenUntil && !DeskBoard.TagUp);   // 2026-11-06: a producer name tag takes its place
+    // 2026-11-06 (#904, #911): the driver card also on the opening lap, and never in any fight (not even while the tower has its turn)
+    static bool FeaturedFree => IsRacing && !IsBattleActive && !BattleRaw && !CloseFight && !ThreeWay && !BumperBattleStyle && !StoryDirector.Visible && !PitStopShowing;
     /// <summary>#716: our pit stop board is up (bottom centre) - the driver card stays away meanwhile.</summary>
     public static bool PitStopShowing;
 

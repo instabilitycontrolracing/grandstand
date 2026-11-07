@@ -43,12 +43,18 @@ public static class OutroDirector
     public static IReadOnlyList<DriverClass> Classes { get; private set; } = Array.Empty<DriverClass>();
 
     /// <summary>Preview / test: start the outro now.</summary>
-    public static void Force(RaceSnapshot s, double nowMs) { Build(s); startMs = nowMs; forced.Clear(); }
+    public static void Force(RaceSnapshot s, double nowMs) { Build(s); startMs = nowMs; forced.Clear(); testRun = true; }
+    static bool testRun;   // #937: a Live view test run is never cancelled by the rewind check
 
     public static void Tick(RaceSnapshot s, double nowMs)
     {
         if (s.SessionNum != session) { session = s.SessionNum; startMs = -1; seenRace = false; plan.Clear(); forced.Clear(); waitCar = -1; waitSinceMs = -1; Waiting = false; }
         bool isRace = (s.SessionTypeName ?? "").Contains("race", StringComparison.OrdinalIgnoreCase);
+        // 2026-11-06 (#937): rewound from after the flag back into the race - the outro (and its "FINAL / CHEQUERED FLAG"
+        // tab, the results, Driver of the Day) must not carry on over the racing; it plays again at the real finish
+        if (startMs >= 0 && !testRun && isRace && s.Phase == RacePhase.Broadcast && s.SessionState is >= 1 and <= 4)
+        { startMs = -1; plan.Clear(); forced.Clear(); waitCar = -1; waitSinceMs = -1; Waiting = false; }
+        if (startMs < 0) testRun = false;
         if (isRace && s.Phase == RacePhase.Broadcast) seenRace = true;
         if (startMs < 0 && seenRace && s.Phase == RacePhase.PostRace)
         {

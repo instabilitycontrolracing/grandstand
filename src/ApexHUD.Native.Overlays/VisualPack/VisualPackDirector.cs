@@ -95,6 +95,7 @@ public sealed class VisualPackDirector : IDisposable
         TickBreak(snap, nowMs);
         TickPip(snap, nowMs, ctx);
         var lensMap = MapFor(snap);
+        if (lensTestUntil > 0 && nowMs >= lensTestUntil) { Lens.ForceGolden = float.NaN; Lens.ForceSun = null; lensTestUntil = double.NegativeInfinity; }   // 2026-11-06: test over
         Lens.Tick(snap, lensMap, mapKey ?? "", ctx.CameraKey, flags.Lens, nowMs);
         if (Lens.Mount != lensMount || lensSrc != Lens.Align.HeadingSource)
         {
@@ -443,12 +444,12 @@ public sealed class VisualPackDirector : IDisposable
         // one at a time, only while nothing else holds the right half (the outro's own cards, a story card) and the
         // right-third column is free (round 4, #349: never over the battle card / battle map / radio card or any other
         // graphic there - VpLayout)
-        bool room = VpLayout.IsFree(RaceAwards.Spot(), now, VpLayout.SlotAwards, 10f);
+        bool room = VpLayout.IsFree(RaceAwards.Spot(), now, VpLayout.SlotAwards, 10f) || now < awardTestUntil;
         if (awardNext >= 0 && awardNext < awardQueue.Count && !Awards.Active(now) && now >= awardAt && !OutroDirector.FullScreen && !StoryDirector.Visible && room)
         {
             if (now - statsAt > 300000) { awardNext = -1; return; }
             Awards.Show(awardQueue[awardNext], awardNext, awardQueue.Count, now);
-            Log?.Invoke("visual pack: award " + RaceAwards.TitleOf(awardQueue[awardNext].Kind));
+            if (!awardGaveWayLogged) Log?.Invoke("visual pack: award " + RaceAwards.TitleOf(awardQueue[awardNext].Kind));
             awardNext++;
             awardAt = now + RaceAwards.CardMs + 900;
         }
@@ -458,7 +459,7 @@ public sealed class VisualPackDirector : IDisposable
             if (Awards.Progress(now) < 0.6 && awardNext > 0) awardNext--;
             Awards.Hide(now);
             awardAt = now + RaceAwards.ExitMs + 600;
-            if (!room) Log?.Invoke("visual pack: award gives way (right third taken)");
+            if (!room && !awardGaveWayLogged) { awardGaveWayLogged = true; Log?.Invoke("visual pack: award gives way (right third taken) - it tries again when the column is free"); }
         }
     }
 
@@ -546,6 +547,7 @@ public sealed class VisualPackDirector : IDisposable
             Log?.Invoke("visual pack: yellow map " + YellowFlagCallout.CurrentPlace);
         }
         if (!want && yellowShown) { yellowShown = false; YellowMap.Hide(now); }
+        if (yellowTestUntil > 0 && now >= yellowTestUntil) { yellowTestUntil = double.NegativeInfinity; if (!yellowShown) YellowMap.Hide(now); }
         if (YellowMap.Active(now))
         {
             YellowMap.ClearCars();
@@ -588,6 +590,11 @@ public sealed class VisualPackDirector : IDisposable
     // ------------------------------------------------------------------------------------------------ W8 going to break
     double pausedSince = -1;
     bool bedOn;
+    // 2026-11-06 (Angelo: every Live view button must work): Test buttons - the break card stays up 8 s even with no paused
+    // replay; the race awards play through a busy right-hand column
+    double breakTestUntil = double.NegativeInfinity, awardTestUntil = double.NegativeInfinity;
+    double pipTestUntil = double.NegativeInfinity, lensTestUntil = double.NegativeInfinity, yellowTestUntil = double.NegativeInfinity;
+    bool awardGaveWayLogged;
 
     void TickBreak(RaceSnapshot s, double now)
     {
@@ -599,7 +606,7 @@ public sealed class VisualPackDirector : IDisposable
             if (flags.BreakMusic) bedOn = StorySound.PlayBedLoop("break_bed");
             Log?.Invoke("visual pack: going to break");
         }
-        if (Break.Showing && !paused)
+        if (Break.Showing && !paused && now >= breakTestUntil)   // 2026-11-06: the Test button holds it 8 s without a paused replay
         {
             Break.Hide(now);
             if (bedOn) { StorySound.StopBed(); bedOn = false; }
@@ -651,6 +658,7 @@ public sealed class VisualPackDirector : IDisposable
 
     void TickPip(RaceSnapshot s, double now, in VpContext ctx)
     {
+        if (now < pipTestUntil) return;   // 2026-11-06: the Test button's 8 s (then the normal rules take it down)
         var me = s.Player; var op = ctx.Opponent;
         bool liveOnly = !ReplayState.IsReplay && !ReplayState.IsReplayFile && !ReplayWipe.BehindLiveNow;
         bool want = flags.Pip && liveOnly && ctx.BattleActive && me != null && op != null && PresentationState.IsRacing && !Busy(ctx);
@@ -807,6 +815,7 @@ public sealed class VisualPackDirector : IDisposable
                 var aw = AwardsFor(s);
                 if (aw.Count == 0) return "no awards in this session's data yet";
                 awardQueue.Clear(); awardQueue.AddRange(aw); awardNext = 0; awardAt = now; statsAt = now; statsDone = true;
+                awardTestUntil = now + aw.Count * (RaceAwards.CardMs + 900) + 2000; awardGaveWayLogged = false;
                 return "race awards (" + aw.Count + ", one at a time)";
             }
             case "V8":
@@ -814,10 +823,32 @@ public sealed class VisualPackDirector : IDisposable
                 var m = MapFor(s); if (m == null) return "no track map";
                 float pct = (s.CameraTarget ?? s.Leader)?.LapDistPct ?? 0.1f; var (a, b) = SectorAround(s, pct);
                 YellowMap.Show(new YellowMapModel(m, a, b, pct, TrackCorners.Named(s.TrackRawName, s.Extras.TrackLength, pct, s.TrackBroadcastName)?.ToUpperInvariant() ?? "TEST", "TEST CARD", 0, GroundFor(s)), now);
-                YellowMap.Hide(now);   // shows for its minimum 3 s
-                return "yellow map";
+                yellowTestUntil = now + 7000;   // 2026-11-06: up 7 s for the Live view button (was its minimum 3 s)
+                return "yellow map (7 s test)";
             }
-            case "W8": if (Break.Showing) Break.Hide(now); else Break.Show(BreakFor(s), now); return "break card";
+            case "W8":
+                if (Break.Showing) { Break.Hide(now); breakTestUntil = double.NegativeInfinity; return "break card off"; }
+                Break.Show(BreakFor(s), now); breakTestUntil = now + 8000; return "break card (8 s)";
+            case "W10":   // 2026-11-06: the Live view's PiP button - the card with two cars of a class for 8 s
+            {
+                var me = s.Player ?? s.CameraTarget ?? s.Leader; var cl = ClassOf(s, me);
+                var other = cl?.Drivers.FirstOrDefault(d => me != null && d.CarIdx != me.CarIdx && Math.Abs(d.PositionInClass - me.PositionInClass) == 1)
+                            ?? cl?.Drivers.FirstOrDefault(d => me != null && d.CarIdx != me.CarIdx);
+                if (me == null || other == null) return "no cars";
+                bool meAhead = me.PositionInClass < other.PositionInClass;
+                var (chaser, lead) = meAhead ? (other, me) : (me, other);
+                Pip.Show(new PipModel("BATTLE FOR P" + Math.Max(1, lead.PositionInClass), chaser.CarNumber, NameFormat.Broadcast(chaser),
+                    lead.CarNumber, NameFormat.Broadcast(lead), me.ClassName, me.ClassColor), now);
+                Pip.SetGap(0.6);
+                pipTestUntil = now + 8000;
+                return "PiP onboard (8 s test)";
+            }
+            case "W11":   // 2026-11-06: the Live view's lens button - a golden-hour flare with the sun top right for 8 s
+            {
+                var at = new SKPoint(1560f, 110f);   // top right, in the sky (the flare sits under every graphic)
+                Lens.ForceGolden = 0.9f; Lens.ForceSun = at; lensTestUntil = now + 8000;
+                return $"lens flare (8 s test, sun at {at.X:0},{at.Y:0})";
+            }
             case "W12": { var d = s.CameraTarget ?? s.Player ?? s.Leader; if (d == null) return "no car"; Rc(s, d, RcCategory.TrackLimits, "TEST: TRACK LIMITS, +1 INCIDENT POINT", now); return "race control"; }
             case "W13": StorySound.Play("timing_beep"); return "purple beep";
             case "W9": StorySound.Play("lowerthird_light"); return "lower-third cue";

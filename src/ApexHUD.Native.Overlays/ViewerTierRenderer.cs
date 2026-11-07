@@ -142,7 +142,7 @@ public sealed class ViewerTierRenderer : IDisposable
         RollActive = roll != null;
 
         string why = "";
-        bool clear = roll == null && (ForceClear || ViewerCardsRenderer.ScreenClear(snap, out why));
+        bool clear = roll == null && (ForceClear || ViewerFeed.TestBoost || ViewerCardsRenderer.ScreenClear(snap, out why));   // 2026-11-06
         if (roll != null) why = "thank-you roll";
         WhyWaiting = clear ? "" : why;
         lastClear = clear;

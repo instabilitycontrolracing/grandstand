@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -55,6 +55,34 @@ public static class CustomCards
 
     /// <summary>Raw telemetry reader (variable name, index) supplied by the host; null = built-in fields only.</summary>
     public static Func<string, int, object?>? ReadVar;
+    /// <summary>2026-11-05 (Angelo: "hook up any data point"): session info by its flattened path
+    /// ("WeekendInfo.TrackDisplayName", "DriverInfo.Drivers[3].TeamName" ...), supplied by the host. Fields "Session.&lt;path&gt;".</summary>
+    public static Func<string, string?>? ReadSession;
+    /// <summary>2026-11-05: outside data supplied by the host's integrations ("G61.*" Garage 61, "League.*" standings).</summary>
+    public static Func<string, Driver, string?>? ReadExternal;
+
+    /// <summary>Every readable detail of a car on the leaderboard ("Car.&lt;name&gt;": CarBrand, TeamName, IRating ...).</summary>
+    public static readonly IReadOnlyList<System.Reflection.PropertyInfo> CarFields = typeof(Driver).GetProperties()
+        .Where(p => p.CanRead && p.GetIndexParameters().Length == 0 && (p.PropertyType.IsPrimitive || p.PropertyType == typeof(string) || p.PropertyType == typeof(decimal)
+                    || Nullable.GetUnderlyingType(p.PropertyType) is { IsPrimitive: true }))
+        .OrderBy(p => p.Name, StringComparer.Ordinal).ToList();
+    static readonly Dictionary<string, System.Reflection.PropertyInfo> carFieldByName = CarFields.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A car detail as text (for the control app's data picker, too).</summary>
+    public static string CarField(Driver d, string name, bool raw = false)
+    {
+        if (!carFieldByName.TryGetValue(name, out var p)) return "-";
+        object? o; try { o = p.GetValue(d); } catch { o = null; }
+        var inv = CultureInfo.InvariantCulture;
+        return o switch
+        {
+            null => "-",
+            float f => f.ToString(raw ? "R" : Math.Abs(f) >= 100 ? "0" : "0.###", inv),
+            double x => x.ToString(raw ? "R" : Math.Abs(x) >= 100 ? "0" : "0.###", inv),
+            bool b => raw ? (b ? "1" : "0") : b ? "YES" : "NO",
+            _ => Convert.ToString(o, inv) ?? "-",
+        };
+    }
 
     /// <summary>One-shot "play this card now" requests (test button), drained on the render thread.</summary>
     public static readonly System.Collections.Concurrent.ConcurrentQueue<string> Requests = new();
@@ -97,7 +125,7 @@ public static class CustomCards
         {
             Name = Str(root, "name", "Your card", 40),
             Template = Str(root, "template", "number", 10) switch { "top5" => "top5", "h2h" => "h2h", _ => "number" },
-            Field = Str(root, "field", "PlacesGained", 48),
+            Field = Str(root, "field", "PlacesGained", 160),   // 2026-11-05: room for "Session.<path>" fields
             Label = Str(root, "label", "", 40),
             Seconds = Math.Clamp(Num(root, "seconds", 8), 3, 30),
             CooldownMinutes = Math.Clamp(Num(root, "cooldown", 5), 0.5, 60),
@@ -327,6 +355,22 @@ public static class CustomCards
             case "iRating": return d.IRating.ToString(inv);
             case "LapsCompleted": return d.LapsCompleted.ToString(inv);
         }
+        // 2026-11-05: any car detail ("Car.TeamName") or session info value ("Session.WeekendInfo.TrackDisplayName");
+        // "{car}" in a session path is this card's car (DriverInfo.Drivers[...] is indexed by CarIdx order in iRacing)
+        if (field.StartsWith("G61.", StringComparison.Ordinal) || field.StartsWith("League.", StringComparison.Ordinal))
+        {
+            string? ev = null; try { ev = ReadExternal?.Invoke(field, d); } catch { }
+            ev ??= "-";
+            if (raw) { var digits = new string(ev.Where(ch => char.IsDigit(ch) || ch == '.' || ch == '-').ToArray()); return digits.Length > 0 ? digits : "0"; }
+            return ev;
+        }
+        if (field.StartsWith("Car.", StringComparison.Ordinal)) return CarField(d, field[4..], raw);
+        if (field.StartsWith("Session.", StringComparison.Ordinal))
+        {
+            string path = field[8..].Replace("{car}", d.CarIdx.ToString(inv), StringComparison.Ordinal);
+            string? sv = null; try { sv = ReadSession?.Invoke(path); } catch { }
+            return string.IsNullOrEmpty(sv) ? "-" : sv;
+        }
         // an iRacing telemetry variable: CarIdx arrays are read for this car, everything else as-is
         var read = ReadVar;
         if (read == null) return "-";
@@ -415,8 +459,24 @@ public static class CustomCards
         "LastLap" => "LAST LAP",
         "iRating" => "IRATING",
         "LapsCompleted" => "LAPS",
-        _ => f.ToUpperInvariant(),
+        _ => Pretty(f),
     };
+
+    /// <summary>"Session.WeekendInfo.TrackDisplayName" -> "TRACK DISPLAY NAME", "CarIdxRPM" -> "RPM".</summary>
+    static string Pretty(string f)
+    {
+        string s = f;
+        int dot = s.LastIndexOf('.'); if (dot >= 0 && dot < s.Length - 1) s = s[(dot + 1)..];
+        if (s.StartsWith("CarIdx", StringComparison.Ordinal) && s.Length > 6) s = s[6..];
+        var sb = new System.Text.StringBuilder(s.Length + 8);
+        for (int i = 0; i < s.Length; i++)
+        {
+            char ch = s[i];
+            if (i > 0 && char.IsUpper(ch) && (char.IsLower(s[i - 1]) || (i + 1 < s.Length && char.IsLower(s[i + 1]) && char.IsUpper(s[i - 1])))) sb.Append(' ');
+            sb.Append(ch == '_' ? ' ' : ch);
+        }
+        return sb.ToString().ToUpperInvariant();
+    }
 
     // ------------------------------------------------------------------ drawing (render thread)
 

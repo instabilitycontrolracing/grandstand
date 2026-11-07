@@ -289,6 +289,8 @@ public sealed class SessionBarRenderer : IDisposable
         var f = snap.Flags;
         bool racing = snap.IsConnected && snap.Phase == RacePhase.Broadcast;
         if (!racing) { lbPrimed = false; return LbKind.None; }
+        // 2026-11-06 (#899, Angelo: "flags should not play in lone qualifying"): no flag lights outside a race
+        if (!(snap.SessionTypeName ?? "").Contains("race", StringComparison.OrdinalIgnoreCase)) { lbPrimed = false; return LbKind.None; }
         bool caution = f.Caution || f.Yellow || YellowFlagCallout.YellowNow;
         if (!lbPrimed)
         {   // first frame of a session (or after loading in mid-race): remember the flags, don't fire the "moment" ones

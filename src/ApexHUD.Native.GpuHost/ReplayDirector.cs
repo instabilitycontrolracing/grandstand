@@ -23,7 +23,7 @@ namespace ApexHUD.Native.GpuHost;
 /// replay, back to where we were) → pass (the car that gained) → battle (the two close cars,
 /// TV1/TV2/TV3 alternating every 8-12 s) → quiet (leader, the user's car, pit stops).</para>
 /// </summary>
-internal sealed class ReplayDirector : IDisposable
+internal sealed partial class ReplayDirector : IDisposable   // #769: broadcast-mode rules in ReplayDirector.Broadcast.cs
 {
     readonly RaceStateService rs;
     readonly Thread thread;
@@ -159,7 +159,26 @@ internal sealed class ReplayDirector : IDisposable
         if (inReplay)
         {
             Status = "On"; Why = "Replaying an incident in slow motion.";
-            if (now >= replayEndMs) EndReplay();
+            // 2026-11-06: no onboard / cockpit view over a replay either
+            string rcam = rs.CurrentCameraName();
+            if (false && UnrealisticCam(rcam) && snap.CameraCarIdx >= 0 && now - lastFixMs > 400 && gTv3 >= 0 && carNumbers.TryGetValue(snap.CameraCarIdx, out var rr))
+            { lastFixMs = now; rs.CamToCar(rr, gTv3); Program.Log($"director: replay - replaced {rcam} with a trackside TV camera"); }
+            double rst = rs.ReadDouble("ReplaySessionTime");
+            if (replayPhase >= 0 && !replayLanded && !double.IsNaN(rst) && rst <= replayIncSt - 3.0 && rst >= replayIncSt - 12) { replayLanded = true; rs.ReplaySpeed(1, slowMotion: false); Program.Log($"director: replay landed at {rst:0.0} (try {replayTries})"); }
+            if (replayPhase >= 0 && !replayLanded && now - replayJumpAtMs > 1500 && replayTries < 6)
+            {
+                replayTries++; replayJumpAtMs = now;
+                rs.ReplaySpeed(0, slowMotion: false);
+                rs.ReplayToSessionTime(replaySn, replayTargetMs);
+                Program.Log($"director: replay jump not landed yet (at {rst:0.0}, want {replayTargetMs / 1000.0:0.0}) - sent again (try {replayTries})");
+            }
+            if (replayPhase >= 0 && !replayLanded && replayTries >= 6 && now - replayJumpAtMs > 1500) { Program.Log("director: replay jump never landed - back to the race"); replayEndMs = now; }
+            if (replayPhase >= 0 && replayLanded && now - replayLogAtMs > 1000) { replayLogAtMs = now; Program.Log($"director: replay at {rst:0.0} (moment {replayIncSt:0.0}, phase {replayPhase})"); }
+            bool landed = replayPhase >= 0 && replayLanded && !double.IsNaN(rst);
+            if (replayPhase == 0 && landed && rst >= replayIncSt - 1.5) { rs.ReplaySpeed(2, slowMotion: true); replayPhase = 1; Program.Log($"director: replay slow motion at {rst:0.0} (moment {replayIncSt:0.0})"); }
+            else if (replayPhase == 1 && landed && rst >= replayIncSt + 2.0) { rs.ReplaySpeed(1, slowMotion: false); replayPhase = 2; Program.Log($"director: replay back to normal speed at {rst:0.0}"); }
+            else if (replayPhase == 2 && landed && rst >= replayIncSt + 5.0) replayEndMs = now;
+            if (now >= replayEndMs) { replayPhase = -1; EndReplay(); }
             return;
         }
 
@@ -168,15 +187,43 @@ internal sealed class ReplayDirector : IDisposable
         // with a TV shot of the same car, even while backing off from a manual change
         int curGroup = rs.ReadInt("CamGroupNumber");
         string curName = groups.FirstOrDefault(g => g.Num == curGroup)?.Name ?? "";
-        if (Unrealistic(curName) && snap.CameraCarIdx >= 0 && now - lastFixMs > 1500)
+        string camName = rs.CurrentCameraName();
+        // 2026-11-06 (Angelo: "don't switch drivers 2 seconds after going to an onboard camera"): when iRacing goes onboard
+        // inside a TV set, the director stays on that driver for at least 10 s
+        bool obCam = UnrealisticCam(camName) && !camName.Contains("Chopper", StringComparison.OrdinalIgnoreCase) && !camName.Contains("Blimp", StringComparison.OrdinalIgnoreCase);
+        if (obCam && (!wasObCam || obCamCar != snap.CameraCarIdx)) { obCamSinceMs = now; obCamCar = snap.CameraCarIdx; }
+        wasObCam = obCam;
+        // 2026-11-06 (#857, Angelo: "the chasing car in a battle should not show the gearbox - nothing to see behind"): in a fight,
+        // a rear-facing camera on the chaser moves to the same camera on the car ahead (which looks back AT the chaser), and a
+        // forward-facing camera on the car ahead moves to the same camera on the chaser (which looks AT the car ahead)
+        if (shot.StartsWith("battle", StringComparison.Ordinal) && pairChaser >= 0 && pairAhead >= 0 && now - lastBattleFlipMs > 1500
+            && camName.Length > 0)
+        {
+            bool rear = camName.Contains("Gearbox", StringComparison.OrdinalIgnoreCase) || camName.Contains("Rear", StringComparison.OrdinalIgnoreCase);
+            bool fwd = camName.Contains("Nose", StringComparison.OrdinalIgnoreCase) || camName.Contains("Roll Bar", StringComparison.OrdinalIgnoreCase)
+                || camName.Contains("Gyro", StringComparison.OrdinalIgnoreCase) || camName.Contains("Cockpit", StringComparison.OrdinalIgnoreCase);
+            int to = rear && snap.CameraCarIdx == pairChaser ? pairAhead : fwd && snap.CameraCarIdx == pairAhead ? pairChaser : -1;
+            if (to >= 0 && carNumbers.TryGetValue(to, out var toRaw))
+            {
+                lastBattleFlipMs = now;
+                if (rs.CamToCar(toRaw, rs.ReadInt("CamGroupNumber"), rs.ReadInt("CamCameraNumber")))
+                {
+                    shotCar = to;
+                    Program.Log($"director: battle - {camName} pointed the wrong way, same camera on the other car");
+                }
+            }
+        }
+        // 2026-11-06 (#851): a saved replay's incident list is read once, up front (the director makes no cuts meanwhile)
+        if (ControlState.Current.DirectorReplays && TickIncidentIndex(snap, now)) { shotCar = -1; shotAtMs = now; return; }
+        if (Unrealistic(curName) && snap.CameraCarIdx >= 0 && now - lastFixMs > 400)
         {
             lastFixMs = now;
             // 2026-10-27 (#408, Angelo: "not the cockpit cam during replays - only roll bar, nose, gearbox, gyro"): the swap
             // goes to an onboard of the same car (a TV camera only if the car has none)
-            int tv = gRollBar >= 0 ? gRollBar : gNose >= 0 ? gNose : gGyro >= 0 ? gGyro : gGearbox >= 0 ? gGearbox : gTv1 >= 0 ? gTv1 : gTv2;
+            int tv = gTv3 >= 0 ? gTv3 : gTvStatic >= 0 ? gTvStatic : gTv1;
             if (tv >= 0 && carNumbers.TryGetValue(snap.CameraCarIdx, out var rawNum) && rs.CamToCar(rawNum, tv))
             {
-                Program.Log($"director: replaced the {curName} camera with an onboard");
+                Program.Log($"director: replaced the {curName} / {camName} camera with a trackside TV camera");
                 shot = "no cockpit"; shotCar = snap.CameraCarIdx; shotGroup = tv; shotAtMs = now; shotHoldMs = 6000;
                 return;
             }
@@ -194,14 +241,14 @@ internal sealed class ReplayDirector : IDisposable
 
         bool race = snap.SessionTypeName.Contains("race", StringComparison.OrdinalIgnoreCase);
         int state = snap.SessionState ?? -1;
-        if (snap.SessionNum != lastSessionNum) { lastSessionNum = snap.SessionNum; finishStage = 0; greenAtMs = -1; greenDist = double.NaN; lastClassPos.Clear(); lastOff.Clear(); }
+        if (snap.SessionNum != lastSessionNum) { lastSessionNum = snap.SessionNum; finishStage = 0; greenAtMs = -1; greenDist = double.NaN; lastClassPos.Clear(); lastOff.Clear(); missed.Clear(); lastPitState.Clear(); finishStage2AtMs = -1; pairChaser = pairAhead = -1; }
         if (state != lastSessionState)
         {
             if (state == 4 && lastSessionState is 1 or 2 or 3 && race) { greenAtMs = now; greenDist = snap.Leader is { } gl ? gl.LapsCompleted + Math.Max(0, gl.LapDistPct) : double.NaN; openTurn = 0; }   // the green flag
-            if (state == 5 && race && finishStage == 0) { finishStage = 1; leaderLapAtFlag = snap.Leader?.LapsCompleted ?? -1; }
+            if (state == 5 && race && finishStage == 0) { finishStage = 1; leaderLapAtFlag = snap.Leader?.LapsCompleted ?? -1; NoteClassLeadersAtFlag(snap); }
             lastSessionState = state;
         }
-        bool canCut = now - shotAtMs >= shotHoldMs;
+        bool canCut = now - shotAtMs >= shotHoldMs && !(wasObCam && obCamCar == snap.CameraCarIdx && now - obCamSinceMs < 10000);
         // 2026-10-27 (#394): from the end of the opener music, through the hold and the track / race cards: the blimp
         // (whole-field mode too)
         if (ControlState.Current.DirectorField && PreRaceCards.ScenicNow && gWide >= 0 && (UserCar(snap) ?? snap.Leader) is { } sc)
@@ -209,7 +256,19 @@ internal sealed class ReplayDirector : IDisposable
             if (shot != "scenic") Cut("scenic", sc.CarIdx, gWide, 6000, force: true);
             return;
         }
-        if (!ControlState.Current.DirectorField) { MyCarOnly(snap, race, now, canCut); return; }
+        // 2026-11-06 (#896, Angelo: "during qualifying didn't we have it set up to prefer onboards?"): practice and qualifying
+        // always use the your-car director (onboards of his car - roll bar, nose, gearbox, gyro - with a TV shot every fourth),
+        // even with whole-field broadcast mode on; the field director is for the race
+        if (!ControlState.Current.DirectorField || !race) { MyCarOnly(snap, race, now, canCut); return; }
+        // #769 broadcast mode: air-time book-keeping, and no cut while the battle on air is mid-pass
+        AccountAir(snap, now);
+        if (canCut && HoldForPass(snap, now)) canCut = false;
+        // 2026-11-06 (Angelo: "it shows two seconds of a battle and then goes to a car in free air"): while the fight on air
+        // is still a fight, nothing routine takes the camera away from it
+        onBattleNow = race && BattleAlive(snap);
+        TrackOffs(snap, now);
+        // 2026-11-06 (#851): a known incident a few seconds ahead -> be on that car live, then replay it
+        if (race && ControlState.Current.DirectorReplays && IncidentAhead(snap, now)) return;
 
         // ---- finish: leader to the line, then the user's car ----
         if (race && (finishStage > 0 || IsFinalLap(snap)))
@@ -222,6 +281,12 @@ internal sealed class ReplayDirector : IDisposable
             }
             if (finishStage == 2)
             {
+                // #769: every class winner crossing the line first (closest to the line first), then the user's car
+                if (NextClassFinisher(snap, now) is { } cw)
+                {
+                    if (shot != "finish: class winner" || shotCar != cw.CarIdx) Cut("finish: class winner", cw.CarIdx, gTv1, 4000, force: true);
+                    return;
+                }
                 var me = UserCar(snap);
                 if (me != null && me.CarIdx != snap.Leader?.CarIdx) { Cut("finish: your car", me.CarIdx, gTv1, 15000, force: shot != "finish: your car"); }
                 finishStage = 3;
@@ -241,12 +306,12 @@ internal sealed class ReplayDirector : IDisposable
         }
 
         // ---- incidents: a car off the track ----
-        if (race && ControlState.Current.DirectorReplays && now - lastIncidentMs > 45000)
+        if (race && ControlState.Current.DirectorReplays && now - lastIncidentMs > 120000 && !onBattleNow && indexState != 2)
         {
             foreach (var d in AllCars(snap))
             {
                 bool was = lastOff.TryGetValue(d.CarIdx, out var w) && w;
-                if (d.OffTrack && !was && !d.IsInPit && d.LapsCompleted >= 1)
+                if (d.OffTrack && !d.IsInPit && d.LapsCompleted >= 1 && (d.PositionInClass is > 0 and <= 5 || d.CarIdx == snap.PlayerCarIdx) && RealIncident(d, now))   // 2026-11-06 (#879): only incidents that matter   // 2026-11-06: a real moment (off 1.2 s+ and slowed right down), not a wide line
                 {
                     lastIncidentMs = now;
                     Remember(snap);
@@ -257,7 +322,8 @@ internal sealed class ReplayDirector : IDisposable
         }
 
         // ---- passes: the car that just gained a place ----
-        if (race && now - lastPassMs > 15000 && canCut)
+        if (race) NoteMissedPasses(snap, now);   // 2026-11-06: every pass is replayed from before it happened - no late live cut to a car already clear   // #769: replayed in the next lull
+        if (false && race && now - lastPassMs > 15000 && canCut)
         {
             foreach (var d in AllCars(snap))
                 if (lastClassPos.TryGetValue(d.CarIdx, out var before) && d.PositionInClass > 0 && d.PositionInClass < before && !d.IsInPit
@@ -270,31 +336,62 @@ internal sealed class ReplayDirector : IDisposable
                 }
         }
         Remember(snap);
+        // #769: restart running order, top-3 pit stops, leader revisit, missed-moment replays
+        if (race && BroadcastExtras(snap, now, canCut && !onBattleNow)) return;
 
         // ---- your own fight (2026-10-25, Angelo): a class car close BEHIND you -> the gearbox camera (looking back
         // at him); close AHEAD -> the nose or gyro camera (looking at him). Onboards only when something is happening
         // in front of / behind that lens, short, and swapped with a TV shot of the pair, so the cards still get air.
-        if (race && canCut && MyFight(snap) is var (mine, _, behind))
+        if (race && canCut && MyFight(snap) is var (mine, _, behind) && !(ProducerDesk.TopFight(snap) is { } tm && tm.Chaser != mine.CarIdx && tm.Ahead != mine.CarIdx && tm.Score >= 15))
         {
             FightCut(mine.CarIdx, behind);
             return;
         }
 
         // ---- battles: the two close cars, alternating the TV cameras ----
-        if (race && canCut && FindBattle(snap) is var (chaser, ahead))
+        if (race && canCut && onBattleNow && ProducerDesk.TopFight(snap) is { } tb && tb.Chaser != pairChaser && tb.Chaser != pairAhead && tb.Score >= 20
+            && AllCars(snap).FirstOrDefault(d => d.CarIdx == pairChaser) is { } oc && AllCars(snap).FirstOrDefault(d => d.CarIdx == pairAhead) is { } oa
+            && ((oc.PositionInClass > oa.PositionInClass ? oc : oa).IntervalSeconds ?? 9) > 0.7)
+        { onBattleNow = false; Program.Log("director: a closer fight elsewhere - switching to it"); }
+        if (race && canCut && onBattleNow && AllCars(snap).FirstOrDefault(d => d.CarIdx == pairChaser) is { } kc
+            && AllCars(snap).FirstOrDefault(d => d.CarIdx == pairAhead) is { } ka)
         {
-            // 2026-10-25 (Angelo: "no static cams during battles"): only active cameras - the helicopter on the pair,
-            // the chasing car's nose / roll bar / gyro (looking at the car ahead), the leading car's gearbox (looking back)
-            battleFlip++;
-            var shots = new List<(int G, int Car, string What)>();
-            if (gChopper >= 0) shots.Add((gChopper, chaser.CarIdx, "helicopter"));
-            if (gNose >= 0) shots.Add((gNose, chaser.CarIdx, "chaser nose"));
-            if (gGearbox >= 0) shots.Add((gGearbox, ahead.CarIdx, "leader gearbox"));
-            if (gChopper >= 0) shots.Add((gChopper, ahead.CarIdx, "helicopter"));
-            if (gRollBar >= 0) shots.Add((gRollBar, chaser.CarIdx, "chaser roll bar"));
-            if (gGyro >= 0) shots.Add((gGyro, chaser.CarIdx, "chaser gyro"));
-            var (group, car, what) = shots.Count > 0 ? shots[battleFlip % shots.Count] : (-1, chaser.CarIdx, "battle");
-            Cut("battle: " + what, car, group, rng.Next(6000, 9001));
+            BroadcastBattleCut(kc, ka);   // same fight, next angle
+            return;
+        }
+        // 2026-11-06 (Angelo: "it should know when the class leader is losing time to traffic"): a class leader coming up
+        // behind slower or lapped cars is a story - shown with a tag, at most every 2 minutes
+        if (race && canCut && Now - lastTrafficMs > 120000 && LeaderInTraffic(snap) is var (tl, tt))
+        {
+            lastTrafficMs = Now;
+            Cut($"class leader in traffic #{tl.CarNumber}", tl.CarIdx, gTv1 >= 0 ? gTv1 : gTv2, 10000);
+            ApexHUD.Native.Overlays.DeskBoard.ShowTag(new ApexHUD.Native.Overlays.NameTag(trafficTagId--, $"{tl.ClassName} leader in traffic",
+                $"#{tl.CarNumber}  {CamCarChip.FullName(tl)}", $"Coming up on #{tt.CarNumber} {CamCarChip.FullName(tt)} \u00B7 {tt.ClassName}", tl.ClassColor), 8);
+            Program.Log($"director: {tl.ClassName} leader #{tl.CarNumber} in traffic behind #{tt.CarNumber}");
+            return;
+        }
+        // 2026-11-06 (#875): the booth's storylines are shots too - the best one not shown in the last 4 minutes, unless a
+        // fight is hot (a pass could come any second), then the fight
+        if (race && canCut && !(ProducerDesk.TopFight(snap) is { } hot && hot.Score >= 12)
+            && ProducerDesk.StoryShots(snap).FirstOrDefault(x => !storyShown.TryGetValue(x.Key, out var at) || Now - at > 240000) is { } ss
+            && AllCars(snap).Any(x => x.CarIdx == ss.Car))
+        {
+            storyShown[ss.Key] = Now;
+            Cut("story: " + ss.Key.Split(':')[0], ss.Car, gTv1 >= 0 ? gTv1 : gTv2, rng.Next(14000, 18001));
+            Program.Log($"director: storyline on screen - {ss.Text}");
+            return;
+        }
+        if (race && canCut && ProducerDesk.TopFight(snap) is { } tf && AllCars(snap).FirstOrDefault(x => x.CarIdx == tf.Chaser) is { } fc
+            && AllCars(snap).FirstOrDefault(x => x.CarIdx == tf.Ahead) is { } fa)
+        {
+            if (fc.CarIdx != pairChaser || fa.CarIdx != pairAhead) Program.Log($"director: following the top fight - #{fc.CarNumber} on #{fa.CarNumber} ({fc.IntervalSeconds:0.0}s, score {tf.Score:0})");
+            BroadcastBattleCut(fc, fa);
+            return;
+        }
+        if (race && canCut && FindBattleBalanced(snap) is var (chaser, ahead))
+        {
+            // #769: wide establishing shot for a new pair, onboards capped at ~30 % of air (ReplayDirector.Broadcast.cs)
+            BroadcastBattleCut(chaser, ahead);
             return;
         }
 
@@ -306,9 +403,9 @@ internal sealed class ReplayDirector : IDisposable
             var me = UserCar(snap);
             switch (quietTurn % 3)
             {
-                case 0 when pitting != null: Cut("pit stop", pitting.CarIdx, gPit >= 0 ? gPit : gTv1, 9000); break;
-                case 1 when me != null: Cut("your car", me.CarIdx, gTv2 >= 0 ? gTv2 : gTv1, 12000); break;
-                default: if (snap.Leader is { } l) Cut("leader", l.CarIdx, gTv1, 10000); break;
+                case 0 when pitting != null: Cut("pit stop", pitting.CarIdx, gPit >= 0 ? gPit : gTv1, 14000); break;
+                case 1 when me != null: Cut("your car", me.CarIdx, gTv2 >= 0 ? gTv2 : gTv1, 16000); break;
+                default: if (snap.Leader is { } l) Cut("leader", l.CarIdx, gTv1, 15000); break;
             }
         }
     }
@@ -360,19 +457,19 @@ internal sealed class ReplayDirector : IDisposable
         // shots are onboards - roll bar, nose, gearbox, gyro in turn - with a TV shot every fourth one for variety
         if (!race && quietTurn % 4 != 0)
         {
-            int[] obq = new[] { gRollBar, gNose, gGearbox, gGyro }.Where(g => g >= 0).ToArray();
+            int[] obq = new[] { gRollBar, gGyro, gNose, gRollBar, gGyro, gGearbox }.Where(g => g >= 0).ToArray();   // #907: more gyro + roll bar
             if (obq.Length > 0) { Cut("your car: onboard", me.CarIdx, obq[quietTurn % obq.Length], rng.Next(10000, 14001)); return; }
         }
         // 2026-10-25 (Angelo: "we have not seen an onboard in ages"): every third quiet shot is an onboard of our car
         // (roll bar, nose, gyro in turn), 8-10 s, unless a story card is up (they get the TV shots)
         if (race && quietTurn % 3 == 0 && ApexHUD.Native.Overlays.StoryDirector.Current == ApexHUD.Native.Overlays.StoryKind.None)
         {
-            int[] ob = new[] { gRollBar, gNose, gGyro }.Where(g => g >= 0).ToArray();
+            int[] ob = new[] { gRollBar, gGyro, gRollBar, gNose, gGyro }.Where(g => g >= 0).ToArray();   // #907
             if (ob.Length > 0) { Cut("your car: onboard", me.CarIdx, ob[(quietTurn / 3) % ob.Length], rng.Next(8000, 10001)); return; }
         }
         // 2026-10-25 (Angelo: "I don't want it using the non-realistic cameras like the chase cams - realistic broadcast"):
         // trackside TV cameras, the static / mixed TV sets and the helicopter only
-        int[] calm = new[] { gTv1, gTv2, gTvStatic, gTv3, gTvMixed, gChopper }.Where(g => g >= 0).ToArray();
+        int[] calm = new[] { gTv1, gTv2, gTvStatic, gTv3, gTvMixed }.Where(g => g >= 0).ToArray();
         Cut("your car", me.CarIdx, calm.Length > 0 ? calm[quietTurn % calm.Length] : -1, rng.Next(10000, 14001));
     }
 
@@ -426,7 +523,7 @@ internal sealed class ReplayDirector : IDisposable
         }
         if (shot == "start" || canCut)
         {
-            int[] active = new[] { gNose, gRollBar, gChopper, gGyro, gGearbox, gChopper }.Where(g => g >= 0).ToArray();
+            int[] active = new[] { gChopper, gTv1, gTv2, gTv3 }.Where(g => g >= 0).ToArray();
             if (active.Length == 0) return;
             int g = active[openTurn++ % active.Length];
             Cut("opening lap", carIdx, g, rng.Next(6000, 8501), force: shot == "start");
@@ -439,9 +536,25 @@ internal sealed class ReplayDirector : IDisposable
 
     /// <summary>Car-mounted views no TV broadcast uses: the cockpit, suspension and chase cameras. (Roll bar, gearbox,
     /// nose and gyro stay: real broadcasts use those onboards - Angelo 2026-10-25: "roll bar is okay, that is a real camera".)</summary>
+    /// <summary>2026-11-06: a camera (not group) name that is an onboard / cockpit / chase / aerial view.</summary>
+bool wasObCam; long obCamSinceMs = -1_000_000; int obCamCar = -1;
+
+    long lastBattleFlipMs = -1_000_000;
+
+    static bool UnrealisticCam(string cam)
+    {
+        if (cam.Length == 0) return false;
+        foreach (var k in new[] { "Cockpit", "Gyro", "Nose", "Roll Bar", "Gearbox", "Susp", "Chase", "Chopper", "Blimp", "Wing", "In Car" })
+            if (cam.Contains(k, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     static bool Unrealistic(string group) =>
         group.Length > 0 && (group.Equals("Cockpit", StringComparison.OrdinalIgnoreCase)
-            || group.Contains("Susp", StringComparison.OrdinalIgnoreCase) || group.Contains("Chase", StringComparison.OrdinalIgnoreCase));
+            || group.Contains("Susp", StringComparison.OrdinalIgnoreCase) || group.Contains("Chase", StringComparison.OrdinalIgnoreCase)
+            // 2026-11-06 (Angelo: real-world TV cameras only): every onboard view is swapped for a TV shot too
+            || group.Contains("Cockpit", StringComparison.OrdinalIgnoreCase) || group.Contains("In Car", StringComparison.OrdinalIgnoreCase));
+
 
     /// <summary>
     /// The user's own fight (2026-10-25, Angelo: "if a car is behind me - defending - prioritise the gearbox camera; if
@@ -454,7 +567,7 @@ internal sealed class ReplayDirector : IDisposable
         myFlip++;
         if (myFlip % 2 == 1)
         {
-            int[] pool = behind ? new[] { gGearbox } : new[] { gNose, gGyro, gRollBar };
+            int[] pool = behind ? new[] { gGearbox } : new[] { gGyro, gRollBar, gNose, gGyro, gRollBar };   // #907
             pool = pool.Where(g => g >= 0).ToArray();
             if (pool.Length > 0)
             {
@@ -465,10 +578,10 @@ internal sealed class ReplayDirector : IDisposable
         }
         // 2026-10-25 (Angelo: "fights should always have active cameras, so no static cams during battles"): the
         // turn between onboards is the helicopter (or another onboard), never a trackside TV camera
-        int[] act = new[] { gChopper, gRollBar, gGyro, gNose }.Where(g => g >= 0).ToArray();
+        int[] act = new[] { gTv1, gTv2, gTv3 }.Where(g => g >= 0).ToArray();
         tvRot++;
-        int pick = gChopper >= 0 && tvRot % 3 != 0 ? gChopper : act.Length > 0 ? act[tvRot % act.Length] : -1;
-        Cut("your fight: active", carIdx, pick, rng.Next(7000, 10001));
+        int pick = act.Length > 0 ? act[tvRot % act.Length] : -1;
+        Cut("your fight: active", carIdx, pick, rng.Next(12000, 16001));
     }
     int tvRot;
 
@@ -584,6 +697,13 @@ internal sealed class ReplayDirector : IDisposable
         gNose = Find("Nose");
         gGyro = Find("Gyro");
         gRollBar = Find("Roll Bar");
+        // Angelo 2026-11-06: real-world TV cameras only - no onboards (roll bar, nose, gyro, gearbox) and never the cockpit
+        // 2026-11-06 (#870): onboards back on now that the TV sets hold trackside cameras only (the cockpit is still never used)
+        // 2026-11-06 (Angelo: "NO MORE COCKPIT CAM - NOT IN TV1, TV2 OR TV3"): at Le Mans iRacing's TV1, TV2 and TV Mixed groups
+        // also hold Cockpit / Roll Bar / Gyro / Nose / Gearbox / Chopper cameras that iRacing switches to by itself.
+        // TV3 is trackside only, so every TV shot uses it; the camera check below catches anything else.
+        // 2026-11-06: reverted - Angelo takes the onboard cameras out of TV1/TV2 himself in iRacing's camera editor
+        // (was: every TV shot forced to TV3)
         Program.Log($"director: {groups.Count} camera groups (wide={gWide} tv1={gTv1} tv2={gTv2} tv3={gTv3} pit={gPit} gearbox={gGearbox} nose={gNose} gyro={gGyro})");
     }
 
@@ -602,33 +722,32 @@ internal sealed class ReplayDirector : IDisposable
 
     void StartReplay(RaceSnapshot snap, Driver car)
     {
-        int sessionNum = rs.ReadInt("ReplaySessionNum", fallback: snap.SessionNum);
-        double sessionTime = rs.ReadDouble("ReplaySessionTime");
-        if (double.IsNaN(sessionTime)) sessionTime = rs.ReadDouble("SessionTime");
-        if (double.IsNaN(sessionTime) || sessionNum < 0) { Cut("incident", car.CarIdx, gTv1, 8000, force: true); return; }
-        resumeSessionNum = sessionNum;
-        resumeSessionTime = sessionTime;
-        replayStartedMs = Now;
-        // jump back 5 s (2026-10-27 #400, Angelo: "a second further back"), on the car, at half speed: about 10 s on screen
-        rs.ReplayToSessionTime(sessionNum, (int)((sessionTime - 5.0) * 1000));
-        // 2026-10-27 (#396, Angelo: "replays should switch to onboard"): the slow-motion replay rides on the car -
-        // roll bar, then gyro, then nose (never the cockpit); a TV camera only when the car has no onboard cameras
-        int ob = gRollBar >= 0 ? gRollBar : gGyro >= 0 ? gGyro : gNose >= 0 ? gNose : gTv1;
-        Cut("incident replay", car.CarIdx, ob >= 0 ? ob : -1, 10000, force: true);
-        rs.ReplaySpeed(2, slowMotion: true);
-        inReplay = true; SlowMoActive = true;
-        replayEndMs = Now + 10500;
-        Program.Log($"director: slow-motion replay of #{car.CarNumber}");
+        // 2026-11-06 (#853): the moment is when the car first left the track (not when we noticed), then the shaped replay
+        double offFor = offSinceMs.TryGetValue(car.CarIdx, out var since) ? (Now - since) / 1000.0 : 1.5;
+        double st = rs.ReadDouble("ReplaySessionTime");
+        if (double.IsNaN(st)) st = rs.ReadDouble("SessionTime");
+        int sn = rs.ReadInt("ReplaySessionNum", fallback: snap.SessionNum);
+        if (double.IsNaN(st) || sn < 0) { Cut("incident", car.CarIdx, gTv1, 8000, force: true); return; }
+        double moment = MomentOf(car, st - offFor);
+        StartShapedReplay(sn, !double.IsNaN(moment) && moment >= st - offFor - 8 && moment <= st ? moment : st - offFor - 1.5, car.CarIdx, car);
     }
+    // 2026-11-06: the replayed car's name tag (who it was and what happened), shown over the replay
+    static int replayTagId = -1000;
+    static void ShowReplayTag(string eyebrow, string l1, string l2, string accent, double secs)
+        => ApexHUD.Native.Overlays.DeskBoard.ShowTag(new ApexHUD.Native.Overlays.NameTag(replayTagId--, eyebrow, l1, l2, accent), secs);
 
     void EndReplay()
     {
         inReplay = false; SlowMoActive = false;
+        // 2026-11-06 (#931): coming back from a replay the running order "changes" in one frame (replay -> race) - that
+        // is not a pass; start the pass / off-track memory fresh so a replay can't queue another replay
+        lastClassPos.Clear(); lastOff.Clear();
+        ApexHUD.Native.Overlays.DeskBoard.EndReplayTag();
         if (rs.SimMode.Equals("replay", StringComparison.OrdinalIgnoreCase))
         {
             // a saved replay: carry on from where we left off, plus the time the slow-mo took
             double elapsed = (Now - replayStartedMs) / 1000.0;
-            rs.ReplayToSessionTime(resumeSessionNum, (int)((resumeSessionTime + elapsed) * 1000));
+            rs.ReplayToSessionTime(resumeSessionNum, (int)(resumeSessionTime * 1000));   // 2026-11-06: no part of the race is skipped
             rs.ReplaySpeed(1, false);
         }
         else rs.ReplayToLive();   // spectating a live session: back to live

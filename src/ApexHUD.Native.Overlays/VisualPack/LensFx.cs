@@ -246,6 +246,21 @@ public sealed class LensFx : VpGraphic
         return GpuContext.Pin(s.Snapshot());
     }
 
+    /// <summary>2026-11-06 (the Live view's Test button): the freest place for a test sun right now - the flare fades away near
+    /// any graphic, so a fixed spot could land beside the battle map and show nothing.</summary>
+    public static SKPoint BestTestSpot(double nowMs)
+    {
+        ReadOnlySpan<float> xs = [1520f, 1700f, 1420f, 1800f, 420f, 250f, 560f];
+        ReadOnlySpan<float> ys = [120f, 300f, 460f, 540f];
+        SKPoint best = new(1520f, 300f); float bk = -1f;
+        foreach (var y in ys) foreach (var x in xs)
+        {
+            float k = FreeTarget(new SKPoint(x, y), nowMs);
+            if (k > bk + 0.01f) { bk = k; best = new SKPoint(x, y); }
+        }
+        return best;
+    }
+
     /// <summary>0..1: how free the sun's spot is right now (the top band of the left / right third, clear of every graphic).</summary>
     static float FreeTarget(SKPoint p, double nowMs)
     {
@@ -263,7 +278,7 @@ public sealed class LensFx : VpGraphic
         double ddt = lastDrawMs < 0 ? 16 : Math.Clamp(nowMs - lastDrawMs, 0, 100);
         lastDrawMs = nowMs;
         // round 3: fade with the space round the sun (out fast when a graphic comes near, in when it clears)
-        float ft = vis > 0.003f || wash > 0.003f ? FreeTarget(src, nowMs) : 0f;
+        float ft = vis > 0.003f || wash > 0.003f ? (ForceSun != null && !float.IsNaN(ForceGolden) ? 1f : FreeTarget(src, nowMs)) : 0f;   // 2026-11-06: a test shows in full
         freeK += (ft - freeK) * (float)Math.Min(1, ddt / (ft > freeK ? 350.0 : 160.0));
         if (ft == 0f && freeK < 0.01f) freeK = 0f;
         if (!Active(nowMs)) return;

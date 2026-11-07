@@ -41,8 +41,14 @@ internal sealed class ControlServer : IDisposable
         this.raceState = raceState;
         this.compositor = compositor;
         this.director = director;
-        listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
-        listener.Prefixes.Add($"http://localhost:{Port}/");
+        // 2026-11-06 (remote control): with "Phones and laptops on my network" on, Grandstand also answers on this PC's
+        // network address - every request from another device needs the PIN (Handle). Takes effect at the next start.
+        if (ProducerDesk.Current.LanOn) listener.Prefixes.Add($"http://+:{Port}/");
+        else
+        {
+            listener.Prefixes.Add($"http://127.0.0.1:{Port}/");
+            listener.Prefixes.Add($"http://localhost:{Port}/");
+        }
     }
 
     public bool Start()
@@ -77,16 +83,36 @@ internal sealed class ControlServer : IDisposable
         string path = req.Url?.AbsolutePath ?? "/";
         string method = req.HttpMethod;
 
+        // 2026-11-06 (remote control): another device on the network needs the PIN - once in the link (?pin=1234), then
+        // a cookie. Nothing from outside this PC gets in without it.
+        if (req.RemoteEndPoint != null && !System.Net.IPAddress.IsLoopback(req.RemoteEndPoint.Address))
+        {
+            string pin = ProducerDesk.Current.LanPin;
+            bool ok = ProducerDesk.Current.LanOn && pin.Length >= 4 && (req.QueryString["pin"] == pin || req.Cookies["gs_pin"]?.Value == pin);
+            if (!ok) { Send(ctx, 403, "text/plain", Encoding.UTF8.GetBytes("Grandstand: open the link with the PIN shown on the Producer page (Remote control).")); return; }
+            if (req.QueryString["pin"] == pin) ctx.Response.Headers.Add("Set-Cookie", $"gs_pin={pin}; Path=/; Max-Age=2592000; SameSite=Strict");
+        }
         // Changes need our own header: a web page open in the browser can't add it to a cross-site
         // request, so no website can blank or hijack the broadcast (CSRF).
         if (method != "GET" && req.Headers["X-Grandstand"] != "1")
         { Send(ctx, 403, "text/plain", Encoding.UTF8.GetBytes("forbidden")); return; }
 
         if (path == "/api/state" && method == "GET") { SendJson(ctx, compositor.Describe(raceState)); return; }
-        if (path == "/api/settings" && method == "GET") { SendJson(ctx, ControlState.Current); return; }
+        if (path == "/api/director/scan" && method == "POST") { ReplayDirector.ScanRequested = true; SendJson(ctx, new { ok = true }); return; }   // 2026-11-06 (#859)
+            if (path == "/api/settings" && method == "GET") { SendJson(ctx, ControlState.Current); return; }
         if (path == "/api/settings" && method == "POST")
         {
-            var s = JsonSerializer.Deserialize<ControlSettings>(ReadBody(req), ControlState.Json);
+            // 2026-11-06 (#890): merge onto the current settings - a POST with a few settings used to reset every other one
+            // to its default (and save that), which is why spout, the director, themes, toggles kept "forgetting" themselves
+            ControlSettings? s;
+            try
+            {
+                var cur = System.Text.Json.JsonSerializer.SerializeToNode(ControlState.Current, ControlState.Json)!.AsObject();
+                var patchObj = System.Text.Json.Nodes.JsonNode.Parse(ReadBody(req))!.AsObject();
+                foreach (var kv in patchObj) cur[kv.Key] = kv.Value?.DeepClone();
+                s = cur.Deserialize<ControlSettings>(ControlState.Json);
+            }
+            catch { s = null; }
             if (s == null) { Send(ctx, 400, "text/plain", Encoding.UTF8.GetBytes("bad settings")); return; }
             ControlState.Replace(s);
             SendJson(ctx, ControlState.Current);
@@ -238,6 +264,124 @@ internal sealed class ControlServer : IDisposable
         }
         if (path.StartsWith("/api/sponsors", StringComparison.Ordinal)) { Sponsors(ctx, path, method); return; }
         if (path.StartsWith("/api/dial", StringComparison.Ordinal)) { Dials(ctx, path, method); return; }
+        if (path.StartsWith("/api/cardimage/", StringComparison.Ordinal)) { CardImage(ctx, path, method); return; }
+        // 2026-11-05 (Angelo: "a viewer that shows the overlay... click any part... see the changes instantly"): the live view
+        if (path == "/api/live/frame" && method == "GET")
+        {
+            int w = int.TryParse(req.QueryString["w"], out int qw) ? Math.Clamp(qw, 480, 1920) : 1280;
+            Interlocked.Exchange(ref OverlayCompositor.SampleUntilTicks, Environment.TickCount64 + 3000);   // the sample race runs while the Live view is open
+            var (jpg, _, live) = CardPreview.Request("frame:" + w, 2500);
+            if (jpg == null) { Text(ctx, 503, "Grandstand is busy - try again"); return; }
+            ctx.Response.Headers["X-Live"] = live ? "1" : "0";
+            ctx.Response.Headers["Cache-Control"] = "no-store";
+            Send(ctx, 200, "image/jpeg", jpg);
+            return;
+        }
+        if (path == "/api/datacatalog" && method == "GET") { SendJson(ctx, DataCatalog.Build(raceState, compositor.CurrentSnapshot)); return; }   // 2026-11-05: the card builder's data picker
+        if (path.StartsWith("/api/integrations", StringComparison.Ordinal)) { IntegrationsApi(ctx, path, method); return; }   // 2026-11-05
+        // 2026-11-06: chat commands - Streamer.bot's "Fetch URL" (a plain GET) gets the reply text to send to chat
+        if (path == "/api/chat" && method == "GET")
+        {
+            string reply = ChatCommands.Answer(raceState.Current, req.QueryString["cmd"] ?? "", req.QueryString["user"] ?? "", req.QueryString["input"] ?? "");
+            Send(ctx, 200, "text/plain; charset=utf-8", Encoding.UTF8.GetBytes(reply));
+            return;
+        }
+        if (path.StartsWith("/api/do/", StringComparison.Ordinal) && method == "POST") { DoApi(ctx, path); return; }        // Stream Deck keys
+        if (path.StartsWith("/api/desk", StringComparison.Ordinal)) { DeskApi(ctx, path, method); return; }               // 2026-11-06: producer desk
+        if (path == "/api/booth" && method == "GET") { SendJson(ctx, ProducerDesk.Booth()); return; }                      // 2026-11-06: commentator page
+        // 2026-11-06: the Live view plays the sample race's sound inside the app (LiveSound.cs)
+        if (path == "/api/live/sounds" && method == "GET") { SendJson(ctx, LiveSound.Since(int.TryParse(req.QueryString["since"], out int sn) ? sn : 0)); return; }
+        if (path.StartsWith("/api/live/sound/", StringComparison.Ordinal) && method == "GET")
+        {
+            var f = int.TryParse(path["/api/live/sound/".Length..], out int sq) ? LiveSound.File(sq) : null;
+            if (f == null) { Text(ctx, 404, "gone"); return; }
+            ctx.Response.Headers["Cache-Control"] = "max-age=600";
+            Send(ctx, 200, f.Value.Type, f.Value.Data);
+            return;
+        }
+        // 2026-11-06: the app's top bar mirrors the session bar - the real watch, and the bar's own facts
+        if (path == "/api/watch.png" && method == "GET")
+        {
+            int sz = int.TryParse(req.QueryString["s"], out int qs) ? qs : 160;
+            var (png, _, _) = CardPreview.Request("watch:" + Math.Clamp(sz, 64, 320), 1500);
+            if (png == null) { Text(ctx, 503, "busy"); return; }
+            ctx.Response.Headers["Cache-Control"] = "no-store";
+            Send(ctx, 200, "image/png", png);
+            return;
+        }
+        if (path == "/api/bar" && method == "GET") { SendJson(ctx, BarInfo()); return; }
+        // 2026-11-06: vertical clips (VerticalClip.cs)
+        if (path == "/api/clip" && method == "POST") { SendJson(ctx, new { message = VerticalClip.Request(req.QueryString["by"] ?? "button"), clip = VerticalClip.StatusObject() }); return; }
+        if (path == "/api/clip" && method == "GET") { SendJson(ctx, VerticalClip.StatusObject()); return; }
+        if (path == "/api/clip/preview.png" && method == "GET")
+        {
+            Interlocked.Exchange(ref OverlayCompositor.SampleUntilTicks, Environment.TickCount64 + 3000);
+            var (jpg, _, _) = CardPreview.Request("frame:1280", 2500);
+            var png = jpg == null ? null : VerticalClip.Preview(jpg);
+            if (png == null) { Text(ctx, 503, "busy"); return; }
+            ctx.Response.Headers["Cache-Control"] = "max-age=3600";   // the page asks for a new ?t= on Refresh; repaints reuse it
+            Send(ctx, 200, "image/png", png);
+            return;
+        }
+        if (path == "/api/clip/ffmpeg" && method == "POST") { SendJson(ctx, new { message = VerticalClip.GetFfmpeg() }); return; }
+        if (path == "/api/clip/folder" && method == "POST")
+        {
+            Directory.CreateDirectory(VerticalClip.Folder);
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + VerticalClip.Folder + "\"") { UseShellExecute = true }); } catch { }
+            SendJson(ctx, new { ok = true }); return;
+        }
+        if (path == "/api/clip/open" && method == "POST")
+        {
+            var p = VerticalClip.PathOf(req.QueryString["name"] ?? "");
+            if (p == null) { Text(ctx, 404, "no such clip"); return; }
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + p + "\"") { UseShellExecute = true }); } catch { }
+            SendJson(ctx, new { ok = true }); return;
+        }
+        if (path == "/api/health" && method == "GET") { SendJson(ctx, AppHealth.Describe()); return; }                     // 2026-11-06: updates, crash reports, setup
+        if (path == "/api/health/wizard" && method == "POST") { AppHealth.WizardDone(); SendJson(ctx, new { ok = true }); return; }
+        if (path == "/api/live/boxes" && method == "GET")
+        {
+            SendJson(ctx, new
+            {
+                live = OverlayCompositor.LiveIsLive, offAir = OverlayCompositor.LiveOffAir,
+                sample = OverlayCompositor.SampleRunning, stage = OverlayCompositor.SampleStage, sound = OverlayCompositor.SampleSound,
+                boxes = OverlayCompositor.LiveBoxes.Select(b => new { id = b.Id, x = b.X, y = b.Y, w = b.W, h = b.H, drawn = b.Drawn }),
+            });
+            return;
+        }
+        if (path == "/api/live/sample" && method == "POST")   // the sample race: pre-race show / race / finish, "restart" plays it from the top
+        {
+            string st = req.QueryString["stage"] ?? OverlayCompositor.SampleStage;
+            if (st is not ("prerace" or "race" or "finish")) { Text(ctx, 400, "unknown stage"); return; }
+            OverlayCompositor.SampleStage = st;
+            if (req.QueryString["restart"] == "1") OverlayCompositor.SampleRun++;
+            if (req.QueryString["sound"] is string snd) OverlayCompositor.SampleSound = snd != "0";
+            Interlocked.Exchange(ref OverlayCompositor.SampleUntilTicks, Environment.TickCount64 + 3000);
+            SendJson(ctx, new { stage = st, run = OverlayCompositor.SampleRun, sound = OverlayCompositor.SampleSound });
+            return;
+        }
+        if (path == "/api/live/trigger" && method == "POST")
+        {
+            string what = req.QueryString["what"] ?? "";
+            if (what == "radio") RadioFeed.Push("ENGINEER", "Good pace. Box this lap, box this lap - we're going to four tyres.");
+            else if (what == "spotter") RadioFeed.Push("SPOTTER", "Car inside, car inside. Still there... clear.");
+            else { Text(ctx, 400, "unknown moment"); return; }
+            SendJson(ctx, new { played = what });
+            return;
+        }
+        // 2026-11-05: the card editor's live preview - the render thread draws the graphic and we send the picture
+        if (path.StartsWith("/api/preview/", StringComparison.Ordinal) && method == "GET")
+        {
+            string id = path["/api/preview/".Length..];
+            if (!CardPictures.TryRect(id, out _)) { Text(ctx, 404, "no such card"); return; }
+            var (png, empty, live) = CardPreview.Request(id);
+            if (png == null) { Text(ctx, 503, "Grandstand is busy - try again"); return; }
+            ctx.Response.Headers["X-Preview-Empty"] = empty ? "1" : "0";
+            ctx.Response.Headers["X-Preview-Live"] = live ? "1" : "0";
+            ctx.Response.Headers["Cache-Control"] = "no-store";
+            Send(ctx, 200, "image/png", png);
+            return;
+        }
         // class transitions (2026-10-24): which source plays per class; POST rescan after dropping frames in
         if (path == "/api/transitions" && method == "GET") { SendJson(ctx, SceneTransitions.Describe()); return; }
         if (path == "/api/transitions/rescan" && method == "POST") { SceneTransitions.Rescan(); SendJson(ctx, SceneTransitions.Describe()); return; }
@@ -296,7 +440,7 @@ internal sealed class ControlServer : IDisposable
         // ---- static files: the control page and the overlay fonts ----
         if (method != "GET") { Send(ctx, 405, "text/plain", Array.Empty<byte>()); return; }
         string root = WebRoot, rel;
-        if (path.StartsWith("/assets/fonts/", StringComparison.Ordinal)) { root = AssetsRoot; rel = path["/assets/".Length..]; }
+        if (path.StartsWith("/assets/fonts/", StringComparison.Ordinal) || path.StartsWith("/assets/flags/", StringComparison.Ordinal)) { root = AssetsRoot; rel = path["/assets/".Length..]; }   // flags: the top bar (2026-11-06)
         else rel = path == "/" ? "index.html" : path.TrimStart('/');
         string full = Path.GetFullPath(Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar)));
         string rootFull = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
@@ -384,9 +528,92 @@ internal sealed class ControlServer : IDisposable
         };
     }
 
+    // ---- 2026-11-05: uploads from the card editor (card pictures) and the clock panel (your own watch face) ----
+    static byte[]? ReadUpload(HttpListenerRequest req, long max)
+    {
+        if (req.ContentLength64 > max) return null;
+        using var ms = new MemoryStream();
+        var buf = new byte[81920]; int n;
+        while ((n = req.InputStream.Read(buf, 0, buf.Length)) > 0) { ms.Write(buf, 0, n); if (ms.Length > max) return null; }
+        return ms.ToArray();
+    }
+    static string? ImageExt(byte[] b)
+    {
+        if (b.Length > 8 && b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47) return ".png";
+        if (b.Length > 3 && b[0] == 0xFF && b[1] == 0xD8) return ".jpg";
+        if (b.Length > 12 && b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F' && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') return ".webp";
+        return null;
+    }
+    static bool Decodes(byte[] b) { try { using var bmp = SkiaSharp.SKBitmap.Decode(b); return bmp != null && bmp.Width > 0; } catch { return false; } }
+
+    void CardImage(HttpListenerContext ctx, string path, string method)
+    {
+        string id = path["/api/cardimage/".Length..];
+        if (id.Length == 0 || id.Length > 24 || !id.All(ch => char.IsAsciiLetterOrDigit(ch) || ch == '_') || !CardPictures.TryRect(id, out _))
+        { Text(ctx, 404, "no such card"); return; }
+        var cur = ControlState.Current;
+        cur.Elements.TryGetValue(id, out var es);
+        if (method == "GET")
+        {
+            var p = es != null ? CardPictures.PathOf(es.Image) : null;
+            if (p == null || !File.Exists(p)) { Text(ctx, 404, "no picture"); return; }
+            Send(ctx, 200, ContentType(p), File.ReadAllBytes(p));
+            return;
+        }
+        if (method is "POST" or "PUT")
+        {
+            var bytes = ReadUpload(ctx.Request, 25L * 1024 * 1024);
+            if (bytes == null) { Text(ctx, 413, "That picture is too big (25 MB max)."); return; }
+            var ext = ImageExt(bytes);
+            if (ext == null || !Decodes(bytes)) { Text(ctx, 400, "That file isn't a picture Grandstand can read (PNG, JPG or WebP)."); return; }
+            Directory.CreateDirectory(CardPictures.Folder);
+            string file = $"{id}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+            File.WriteAllBytes(Path.Combine(CardPictures.Folder, file), bytes);
+            foreach (var old in Directory.GetFiles(CardPictures.Folder, id + "_*"))
+                if (!string.Equals(Path.GetFileName(old), file, StringComparison.OrdinalIgnoreCase)) try { File.Delete(old); } catch { }
+            UpdateElement(id, e => e.Image = file);
+            SendJson(ctx, ControlState.Current);
+            return;
+        }
+        if (method == "DELETE")
+        {
+            if (es != null && CardPictures.PathOf(es.Image) is { } p && File.Exists(p)) try { File.Delete(p); } catch { }
+            UpdateElement(id, e => e.Image = "");
+            SendJson(ctx, ControlState.Current);
+            return;
+        }
+        Text(ctx, 405, "method not allowed");
+    }
+
+    static void UpdateElement(string id, Action<ElementSettings> change)
+    {
+        // a copy of the current settings with one graphic changed, saved the normal way
+        var s = JsonSerializer.Deserialize<ControlSettings>(JsonSerializer.Serialize(ControlState.Current, ControlState.Json), ControlState.Json)!;
+        if (!s.Elements.TryGetValue(id, out var e)) { e = new ElementSettings(); s.Elements[id] = e; }
+        change(e);
+        ControlState.Replace(s);
+    }
+
     void Dials(HttpListenerContext ctx, string path, string method)
     {
         if (path == "/api/dials" && method == "GET") { SendJson(ctx, DescribeDials()); return; }
+        if (path == "/api/dials/upload" && method == "POST")
+        {
+            var bytes = ReadUpload(ctx.Request, 40L * 1024 * 1024);
+            if (bytes == null) { Text(ctx, 413, "That picture is too big (40 MB max)."); return; }
+            var ext = ImageExt(bytes);
+            if (ext == null || !Decodes(bytes)) { Text(ctx, 400, "That file isn't a picture Grandstand can read (PNG, JPG or WebP)."); return; }
+            string raw = ctx.Request.QueryString["name"] ?? "my face";
+            string stem = new string(Path.GetFileNameWithoutExtension(raw).Where(ch => char.IsLetterOrDigit(ch) || ch is ' ' or '-' or '_').ToArray()).Trim();
+            if (stem.Length == 0) stem = "my face"; if (stem.Length > 60) stem = stem[..60];
+            Directory.CreateDirectory(ClockDial.DialsFolder);
+            string name = stem + ext; int n = 2;
+            while (File.Exists(Path.Combine(ClockDial.DialsFolder, name))) name = $"{stem} {n++}{ext}";
+            File.WriteAllBytes(Path.Combine(ClockDial.DialsFolder, name), bytes);
+            ClockDial.Select("file:" + name, null);
+            SendJson(ctx, DescribeDials());
+            return;
+        }
         if (path == "/api/dial" && method == "POST")
         {
             string dial; bool? hands = null;
@@ -620,6 +847,147 @@ internal sealed class ControlServer : IDisposable
         return false;
     }
 
+    // 2026-11-05: the Integrations page (Garage 61, Discord, league standings, Stream Deck, status of everything)
+    void IntegrationsApi(HttpListenerContext ctx, string path, string method)
+    {
+        var req = ctx.Request;
+        if (path == "/api/integrations" && method == "GET")
+        {
+            SendJson(ctx, new { settings = Integrations.Current, status = Integrations.Status(raceState), fields = Integrations.DataFields.Select(f => new { name = f.Name, desc = f.Desc }) });
+            return;
+        }
+        if (path == "/api/integrations" && method == "POST")
+        {
+            var s = JsonSerializer.Deserialize<Integrations.Settings>(ReadBody(req), ControlState.Json);
+            if (s == null) { Text(ctx, 400, "bad settings"); return; }
+            s.DiscordWebhook = (s.DiscordWebhook ?? "").Trim(); s.LeagueSource = (s.LeagueSource ?? "").Trim();
+            s.LeagueName = (s.LeagueName ?? "").Trim(); s.DiscordStreamLink = (s.DiscordStreamLink ?? "").Trim();
+            Integrations.Save(s);
+            SendJson(ctx, new { ok = true });
+            return;
+        }
+        if (path == "/api/integrations/g61/key" && method == "POST")
+        {
+            string token = "";
+            try { using var doc = JsonDocument.Parse(ReadBody(req)); token = doc.RootElement.GetProperty("token").GetString() ?? ""; } catch { }
+            if (token.Length > 400) { Text(ctx, 400, "too long"); return; }
+            Integrations.SaveG61Token(token);
+            SendJson(ctx, Integrations.TestG61().GetAwaiter().GetResult());
+            return;
+        }
+        if (path == "/api/integrations/g61/test" && method == "POST") { SendJson(ctx, Integrations.TestG61().GetAwaiter().GetResult()); return; }
+        if (path == "/api/integrations/discord/test" && method == "POST") { SendJson(ctx, new { result = Integrations.TestDiscord().GetAwaiter().GetResult() }); return; }
+        // 2026-11-06: YouTube (the Google client file, sign-in / out), Hue (find, pair, rooms, test)
+        if (path == "/api/integrations/youtube/client" && method == "POST")
+        {
+            string body = ReadBody(req);
+            if (body.Length > 64 * 1024) { Text(ctx, 400, "too big"); return; }
+            SendJson(ctx, new { problem = YouTubeUpload.SaveClient(body), status = YouTubeUpload.Status });
+            return;
+        }
+        if (path == "/api/integrations/youtube/signin" && method == "POST") { YouTubeUpload.BeginSignIn(); SendJson(ctx, new { status = YouTubeUpload.Status }); return; }
+        if (path == "/api/integrations/youtube/signout" && method == "POST") { YouTubeUpload.SignOut(); SendJson(ctx, new { status = YouTubeUpload.Status }); return; }
+        if (path == "/api/integrations/hue/discover" && method == "POST") { SendJson(ctx, HueLights.Discover().GetAwaiter().GetResult()); return; }
+        if (path == "/api/integrations/hue/pair" && method == "POST") { SendJson(ctx, HueLights.Pair().GetAwaiter().GetResult()); return; }
+        if (path == "/api/integrations/hue/rooms" && method == "GET") { SendJson(ctx, HueLights.Rooms().GetAwaiter().GetResult()); return; }
+        if (path == "/api/integrations/hue/test" && method == "POST") { HueLights.Test(); SendJson(ctx, new { ok = true }); return; }
+        // 2026-11-06: viewer bets
+        if (path == "/api/integrations/bets/test" && method == "POST") { Bets.Test(); SendJson(ctx, new { ok = true }); return; }
+        if (path == "/api/integrations/bets/twitchtest" && method == "POST") { SendJson(ctx, new { result = Bets.TestTwitch() }); return; }
+        if (path == "/api/integrations/bets/reset" && method == "POST") { Bets.ResetPoints(); SendJson(ctx, new { ok = true }); return; }
+        if (path == "/api/integrations/league/reload" && method == "POST") { Integrations.ReloadLeague().GetAwaiter().GetResult(); SendJson(ctx, new { status = Integrations.LeagueStatus, rows = Integrations.League.Take(10) }); return; }
+        Text(ctx, 404, "not found");
+    }
+
+    /// <summary>2026-11-06: what the session bar shows, for the control app's top bar (live race, or the sample race).</summary>
+    object BarInfo()
+    {
+        var s = compositor.CurrentSnapshot;
+        bool live = raceState.Current.IsConnected;
+        bool f = (ControlState.Current.TempUnit == "auto" ? s.TemperatureUnit : ControlState.Current.TempUnit).StartsWith("F", StringComparison.OrdinalIgnoreCase);
+        string T(float c) => (f ? Math.Round(c * 9 / 5 + 32) : Math.Round(c)).ToString(System.Globalization.CultureInfo.InvariantCulture) + (f ? "°F" : "°C");
+        var tod = TimeSpan.FromSeconds(Math.Max(0, s.SessionTimeOfDay) % 86400);
+        string label = s.Phase switch
+        {
+            RacePhase.PreRace => s.SessionState == 3 ? "FORMATION LAP" : "PRE-RACE",
+            RacePhase.PostRace => "FINISHED",
+            _ => (s.SessionTypeName ?? "").ToUpperInvariant(),
+        };
+        double len = s.SessionLengthSeconds, left = s.SessionTimeRemaining;
+        var leader = s.ClassLeaderboard.FirstOrDefault()?.Drivers.FirstOrDefault(d => d.PositionInClass == 1);
+        bool any = s.IsConnected && !string.IsNullOrEmpty(s.TrackDisplayName);
+        return new
+        {
+            live, sample = OverlayCompositor.SampleRunning, any,
+            track = any ? (s.TrackBroadcastName.Length > 0 ? s.TrackBroadcastName : s.TrackDisplayName).ToUpperInvariant() : "",
+            country = (s.TrackCountryCode ?? "").ToLowerInvariant(),
+            air = any ? T(s.AirTempC) : "", trackTemp = any ? T(s.TrackTempC) : "", local = any ? $"{tod.Hours:00}:{tod.Minutes:00}" : "",
+            label = any ? label : "", timer = any && left > 0 ? LapTimeFormat.SessionTimer(left) : "",
+            lap = any ? s.CurrentLap : 0, laps = s.TotalLaps is > 0 and < 2000 ? s.TotalLaps : 0,
+            progress = any && len > 0 && left >= 0 ? Math.Clamp(1 - left / len, 0, 1) : 0,
+            leaderClass = leader != null ? (s.ClassLeaderboard.FirstOrDefault()?.Name ?? "").ToUpperInvariant() : "",
+            leader = leader != null ? $"#{leader.CarNumber} {ApexHUD.Native.Common.NameFormat.Broadcast(leader)}" : "",
+        };
+    }
+
+    // 2026-11-06: the producer desk (ProducerDesk.cs)
+    void DeskApi(HttpListenerContext ctx, string path, string method)
+    {
+        var q = ctx.Request.QueryString;
+        int I(string k, int d = -1) => int.TryParse(q[k], out int v) ? v : d;
+        if (path == "/api/desk" && method == "GET") { SendJson(ctx, ProducerDesk.Describe()); return; }
+        if (path == "/api/desk" && method == "POST")
+        {
+            var s = JsonSerializer.Deserialize<ProducerDesk.Settings>(ReadBody(ctx.Request), ControlState.Json);
+            if (s == null) { Text(ctx, 400, "bad settings"); return; }
+            s.Commentators = (s.Commentators ?? new()).Where(c => (c.Name ?? "").Trim().Length > 0).Take(12)
+                .Select(c => new ProducerDesk.Commentator { Name = c.Name.Trim()[..Math.Min(60, c.Name.Trim().Length)], Role = (c.Role ?? "").Trim()[..Math.Min(40, (c.Role ?? "").Trim().Length)] }).ToList();
+            ProducerDesk.Save(s);
+            SendJson(ctx, new { ok = true });
+            return;
+        }
+        if (method != "POST") { Text(ctx, 404, "not found"); return; }
+        string msg = path switch
+        {
+            "/api/desk/mark" => ProducerDesk.Mark(q["label"] ?? ""),
+            "/api/desk/replay" => ProducerDesk.PlayMoment(I("i"), q["slow"] == "1"),
+            "/api/desk/live" => ProducerDesk.BackToLive(),
+            "/api/desk/show" => ProducerDesk.Show(q["what"] ?? "", I("a"), I("b"), I("i")),
+            "/api/desk/penalty" => ProducerDesk.Penalty(I("car"), q["kind"] ?? "penalty", q["text"] ?? ""),
+            "/api/desk/roster" => Reload(),
+            _ => "",
+        };
+        if (msg.Length == 0) { Text(ctx, 404, "not found"); return; }
+        SendJson(ctx, new { result = msg });
+        static string Reload() { ProducerDesk.ReloadRoster().GetAwaiter().GetResult(); return ProducerDesk.RosterStatus; }
+    }
+
+    /// <summary>Stream Deck keys (Grandstand.exe --do ...): ON AIR, and switching one graphic on or off.</summary>
+    void DoApi(HttpListenerContext ctx, string path)
+    {
+        var cur = ControlState.Current;
+        var s = JsonSerializer.Deserialize<ControlSettings>(JsonSerializer.Serialize(cur, ControlState.Json), ControlState.Json)!;
+        if (path == "/api/do/onair")
+        {
+            string to = ctx.Request.QueryString["to"] ?? "";
+            s.OnAir = to == "1" ? true : to == "0" ? false : !cur.OnAir;
+            ControlState.Replace(s);
+            SendJson(ctx, new { onAir = s.OnAir });
+            return;
+        }
+        if (path == "/api/do/toggle")
+        {
+            string id = ctx.Request.QueryString["id"] ?? "";
+            if (id.Length is 0 or > 40) { Text(ctx, 400, "which graphic?"); return; }
+            if (!s.Elements.TryGetValue(id, out var el)) s.Elements[id] = el = new ElementSettings();
+            el.Enabled = !el.Enabled;
+            ControlState.Replace(s);
+            SendJson(ctx, new { id, enabled = el.Enabled });
+            return;
+        }
+        Text(ctx, 404, "not found");
+    }
+
     void Viewer(HttpListenerContext ctx, string path, string method)
     {
         if (path == "/api/viewer" && method == "GET") { SendJson(ctx, ViewerStatus()); return; }
@@ -645,7 +1013,7 @@ internal sealed class ControlServer : IDisposable
         {
             var r = ApexHUD.Native.Overlays.ViewerFeed.Test(Str(root, "type") ?? ctx.Request.QueryString["type"]);
             if (!r.Accepted) { Text(ctx, 400, r.Why); return; }
-            SendJson(ctx, new { accepted = r.Accepted, onScreen = r.OnScreen, why = r.Why + (r.OnScreen ? " - plays when the screen is clear (on track, no battle, not lap 1 or the finish)" : "") });
+            SendJson(ctx, new { accepted = r.Accepted, onScreen = r.OnScreen, why = r.Why + (r.OnScreen ? " - playing now (a test skips the wait for a clear screen)" : "") });
             return;
         }
         // #603: the thank-you roll - {"action": "play"} (this stream's names), "sample" (made-up names, for a look), "stop"

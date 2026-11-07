@@ -37,7 +37,9 @@ public static class BattleDetection
 
     public static BattleCandidate Compute(RaceSnapshot snap)
     {
-        var player = snap.Player;
+        // 2026-11-06 (Angelo: "the battle cards don't adjust to the target car the race director has selected"): when you
+        // are not driving live (replays, spectating, the director's broadcast), the battle is the camera car's
+        var player = !DrivingState.DrivingLive && snap.CameraTarget is { IsPaceCar: false } cam ? cam : snap.Player;
         if (player == null || snap.ClassLeaderboard.Count == 0) return BattleCandidate.None;
 
         // Find the player's class group.

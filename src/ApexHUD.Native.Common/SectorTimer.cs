@@ -52,6 +52,19 @@ public static class SectorTimer
     /// <summary>New session or a replay jump: forget everything.</summary>
     public static void Reset() { lock (gate) { cars.Clear(); classBest.Clear(); } }
 
+    /// <summary>2026-11-06 (producer desk / commentator page): each car's best time per sector (NaN = none yet) and its
+    /// last completed sector times, by CarIdx. Copies - safe to read off the data thread.</summary>
+    public static Dictionary<int, (double[] Best, double[] Last)> Snapshot()
+    {
+        lock (gate)
+        {
+            int n = Math.Max(1, starts.Length);
+            return cars.ToDictionary(kv => kv.Key, kv => (
+                kv.Value.Best.Take(n).Select(x => x >= double.MaxValue / 2 ? double.NaN : x).ToArray(),
+                kv.Value.Cur.Take(n).ToArray()));
+        }
+    }
+
     // ---- kept on disk (2026-10-24, Angelo: a Grandstand restart lost the purple/green sectors) ----
     static string key = "";
     static long lastSaveTicks;

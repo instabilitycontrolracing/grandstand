@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Grandstand Control</title>
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="app" id="app">
   <header class="bar">
+    <div class="bar-l">
     <div class="brand">
       <span class="word">GRANDSTAND</span>
       <span class="rule" aria-hidden="true"></span>
@@ -16,6 +18,7 @@
     </div>
     <div class="status" id="status" aria-live="polite">
       <span class="dot"></span><span class="state">Connecting…</span><span class="where"></span>
+    </div>
     </div>
     <div class="right">
       <div class="modes" role="group" aria-label="Mode" id="modes">
@@ -30,10 +33,14 @@
 
   <nav class="rail" aria-label="Screens" id="rail">
     <a href="#onair" data-screen="onair">On Air</a>
+    <a href="#live" data-screen="live">Live view</a>
     <a href="#show" data-screen="show">Show</a>
     <a href="#event" data-screen="event">Event &amp; sponsors</a>
+    <a href="#themes" data-screen="themes">Themes</a>
     <a href="#test" data-screen="test">Test cards</a>
     <a href="#settings" data-screen="settings">Settings</a>
+    <a href="#desk" data-screen="desk">Producer</a>
+    <a href="#integrations" data-screen="integrations">Integrations</a>
     <div class="studio-group" id="studioGroup">
       <div class="label">Studio</div>
       <a href="#studio" data-screen="studio">Preview &amp; Program</a>
@@ -51,5 +58,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
 <script src="app.js"></script>
+<script src="desk.js"></script>
 </body>
 </html>

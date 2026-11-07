@@ -615,6 +615,8 @@ public sealed class BattleCardRenderer : IDisposable
     {
         if (snap.Phase != RacePhase.Broadcast || !LooksLikeRace(snap.SessionTypeName))
             return (BattleState.None, null, null, AccentGold, 0, snap.Player);
+        // 2026-11-06 (#930): no "battle for P4 - under pressure" behind the pace car - fights start at the green
+        if (snap.SessionState is < 4) return (BattleState.None, null, null, AccentGold, 0, snap.Player);
 
         var cand = BattleDetection.Compute(snap);
         if (cand.Player == null) return (BattleState.None, null, null, AccentGold, 0, snap.Player);

@@ -108,7 +108,11 @@ public sealed class GridIntro : IDisposable
             catch { }
             if (audioStartMs < 0 && nowMs - launchMs > 4000) audioStartMs = launchMs + 400;   // player never reported
         }
-        double start = audioStartMs >= 0 ? audioStartMs : launchMs + (expectAudio ? 400 : 0);
+        // 2026-11-06 (#900, Angelo: "the intro randomly plays the globe for a split second before the intro starts"): the intro
+        // used to run on a guessed start until the music player reported the real one - when the music started late it ran
+        // ahead (into the globe) and then jumped back. Now it holds its first frame until the music has really started.
+        if (expectAudio && audioStartMs < 0) return 0.0;
+        double start = audioStartMs >= 0 ? audioStartMs : launchMs;
         return (nowMs - start) / 1000.0;
     }
 
@@ -632,10 +636,11 @@ public sealed class GridIntro : IDisposable
 
     /// <summary>The biggest logo-shaped box that fits in the circuit's infield without touching the
     /// line, in the map's pixel space. Worked out once per layout.</summary>
-    readonly Dictionary<string, SKRect?> holeCache = new(StringComparer.OrdinalIgnoreCase);
-    SKRect? Hole(string key, SKPath path, int mw, int mh, float A)
+    // 2026-11-06: shared with the pre-race track card (its logo landed on the line at Watkins Glen's Boot)
+    static readonly Dictionary<string, SKRect?> holeCache = new(StringComparer.OrdinalIgnoreCase);
+    internal static SKRect? Hole(string key, SKPath path, int mw, int mh, float A)
     {
-        if (holeCache.TryGetValue(key, out var hit)) return hit;
+        lock (holeCache) if (holeCache.TryGetValue(key, out var hit)) return hit;
         SKRect? result = null;
         try
         {
@@ -692,7 +697,7 @@ public sealed class GridIntro : IDisposable
             }
         }
         catch { result = null; }
-        holeCache[key] = result;
+        lock (holeCache) holeCache[key] = result;
         return result;
     }
 

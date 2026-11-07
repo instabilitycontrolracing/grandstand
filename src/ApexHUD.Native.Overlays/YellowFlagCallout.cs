@@ -66,7 +66,11 @@ public sealed class YellowFlagCallout
                 else if (!motion.TryGetValue(d.CarIdx, out m) || t - m.T >= 3 || t < m.T) motion[d.CarIdx] = (t, d.LapDistPct, -1f);   // -1 = speed not known yet
             }
 
-        bool racing = snap.IsConnected && snap.Phase == RacePhase.Broadcast;
+        // 2026-11-06 (#899/#924, Angelo: no flags at all outside a race - a YELLOW FLAG map card still came up in
+        // qualifying): yellows only exist in a race session; this one switch silences the callout, the yellow map
+        // card, the battle map's yellow and the session bar light together.
+        bool raceSession = (snap.SessionTypeName ?? "").Contains("race", StringComparison.OrdinalIgnoreCase);
+        bool racing = snap.IsConnected && snap.Phase == RacePhase.Broadcast && raceSession;
         bool own = racing && !snap.Flags.Caution && !snap.Flags.Checkered && !snap.Flags.Red && OwnYellow(snap, len, t);
         bool yellow = racing && ((snap.Flags.Yellow && !snap.Flags.Caution) || own);
         YellowNow = yellow;

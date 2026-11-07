@@ -21,6 +21,11 @@ public static partial class RaceDiary
         double len = TrackCorners.LengthM(snap.Extras.TrackLength);
         if (len < 500) return;
         if (snap.SessionState is >= 5) return;    // chequered flag / cool-down: cars slowing for the pits, not contacts
+        // 2026-11-06 (#929): speeds are measured on the wall clock, so a paused or slowed replay (the director's own
+        // slow-motion replays, a pause) made every fast car "stop hard" at once - 18 fake contacts logged in one go.
+        // Only judge motion while the replay plays at normal speed; start fresh after.
+        if (ReplayState.IsReplay && !ReplayState.PlayingNormally) { motion.Clear(); return; }
+        if (snap.SessionState is < 4) { motion.Clear(); return; }   // grid / pace lap: no racing contacts yet
         double t = (now - DateTime.UnixEpoch).TotalSeconds;
         var cars = new List<(Driver D, string Cls, double Dist)>(64);
         foreach (var cls in snap.ClassLeaderboard)

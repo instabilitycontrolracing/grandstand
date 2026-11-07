@@ -176,6 +176,9 @@ public sealed partial class OnboardFullRenderer
         // 2026-10-29 (car parity): the shift rpm is the camera car's own (iRacing's for our model, Lovely Car Data's for
         // others). Known shift but no redline: the scale runs to the next thousand past it. Neither known: a plain
         // scale with no shift lights and no red zone - never a made-up shift point.
+        // 2026-11-06 (#876): the tach and shift lights only on his own car (other cars: no gauge in the way)
+        if (ob.IsPlayerCar)
+        {
         bool shiftKnown = ob.ShiftRpm > 1000;
         float red = ob.RedlineRpm > 1000 ? ob.RedlineRpm
                   : shiftKnown ? (MathF.Floor(ob.ShiftRpm / 1000f) + 1f) * 1000f
@@ -221,6 +224,7 @@ public sealed partial class OnboardFullRenderer
             fill.Color = new SKColor(255, 255, 255, A(0.12f)); c.DrawCircle(lx, ly, 4.2f, fill);
             if (on > 0) { fill.Color = lc.WithAlpha(A(on)); c.DrawCircle(lx, ly, 4.2f, fill); }
         }
+        }
 
         // TC and ABS / LOCK lights either side of the wheel (2026-10-25): lit while traction control is cutting the throttle
         // and while ABS is working - or, on a car without ABS, while a wheel is locked - our own car only (iRacing doesn't send it for others)
@@ -247,6 +251,9 @@ public sealed partial class OnboardFullRenderer
             AidLight(c, cx + 116f, H - 226f, kT, tcSolid, sevR, lockRear, alpha);
         }
 
+        // 2026-11-06 (#912, Angelo): the steering wheel and the speed only on his own car - other cars get the map there
+        if (ob.IsPlayerCar)
+        {
         // ---- steering wheel (turns with the real one; iRacing's angle is + to the left)
         float wy = H - 226f, wr = 38f;
         c.Save(); c.Translate(cx, wy); c.RotateDegrees((float)(-sSteer * 180.0 / Math.PI));
@@ -260,6 +267,7 @@ public sealed partial class OnboardFullRenderer
         c.DrawCircle(0, wr * 0.08f, wr * 0.28f, stroke);
         fill.Color = Gold.WithAlpha(A(1)); c.DrawRect(-2f, -wr - 4f, 4f, 9f, fill);   // the 12 o'clock stripe
         c.Restore();
+        }
 
         // ---- gear, speed, rpm
         int g = ob.Gear;
@@ -269,7 +277,11 @@ public sealed partial class OnboardFullRenderer
         // hang below the line (3 4 5 7 9), so each gear is centred on its own shape - every gear sits at the
         // same height, clear of the ribbon
         if (gearBoundsFor != gearTxt) { gearBoundsFor = gearTxt; text.MeasureText(gearTxt, ref gearBounds); }
-        TextTracked.Draw(c, text, gearTxt, cx, H - 138f - (gearBounds.Top + gearBounds.Bottom) / 2f, 0f);
+        // 2026-11-06 (#927, Angelo): the gear number only on his own car - other cars' onboards get a bigger map there instead
+        if (ob.IsPlayerCar)
+            TextTracked.Draw(c, text, gearTxt, cx, H - 138f - (gearBounds.Top + gearBounds.Bottom) / 2f, 0f);
+        if (ob.IsPlayerCar)
+        {
         int spd = Math.Max(0, (int)Math.Round(sSpeed * (ob.Metric ? 3.6f : 2.23694f)));
         if (spd != spdVal) { spdVal = spd; spdTxt = Digits(spd); }
         text.TextSize = 66f; text.TextAlign = SKTextAlign.Right;
@@ -281,12 +293,17 @@ public sealed partial class OnboardFullRenderer
         text.Color = Ivory.WithAlpha(A(1));
         text.Typeface = Fonts.Inter.SemiBold; text.TextSize = 13f; text.Color = Tert.WithAlpha(A(1));   // #340: was 11
         TextTracked.DrawHalo(c, text, ob.Metric ? "KM/H" : "MPH", cx - 150f, H - 70f, 2.0f);
+        }
+        // 2026-11-06 (#876, Angelo): the RPM number only on his own car - on other cars it just sits in the way
+        if (ob.IsPlayerCar)
+        {
         int rpm = (int)(Math.Round(sRpm / 10f) * 10);
         if (rpm != rpmVal) { rpmVal = rpm; rpmTxt = rpm.ToString("N0", CultureInfo.InvariantCulture); }
         text.Typeface = Fonts.CormorantGaramond.Bold; text.TextSize = 50f; text.TextAlign = SKTextAlign.Left; text.Color = Ivory.WithAlpha(A(0.92f));
         TextTracked.Draw(c, text, rpmTxt, cx + 150f, H - 92f, 0f);
         text.Typeface = Fonts.Inter.SemiBold; text.TextSize = 13f; text.Color = Tert.WithAlpha(A(1));
         TextTracked.DrawHalo(c, text, "RPM", cx + 150f, H - 70f, 2.0f);
+        }
         text.TextAlign = SKTextAlign.Left;
 
         // ---- pedals: tall hairline bars framing the cluster + the ribbon along the bottom edge
@@ -303,7 +320,14 @@ public sealed partial class OnboardFullRenderer
             GCircle(c, 230f, H - 196f, 82f, t, alpha);
         }
         // mini track map, bottom-right - opposite the g-circle (Angelo 2026-10-25: "the word")
-        MiniMap(c, W - 250f, H - 196f, snap, ob, alpha, nowMs);
+        if (ob.IsPlayerCar) MiniMap(c, W - 250f, H - 196f, snap, ob, alpha, nowMs);
+        else
+        {   // #912: in the middle, where the wheel was; #927: 1.6x bigger (no wheel, no gear, no speed there now)
+            const float big = 1.6f; float my = H - 210f;
+            c.Save(); c.Scale(big, big, cx, my);
+            MiniMap(c, cx, my, snap, ob, alpha, nowMs);
+            c.Restore();
+        }
         PlaceLabel(c, W, snap, ob, alpha, nowMs);
     }
 
@@ -664,7 +688,7 @@ public sealed partial class OnboardFullRenderer
         }
         if (t - gapsAt < 0.5) return;   // gaps refresh twice a second
         gapsAt = t;
-        aheadTxt = me.IntervalSeconds is double ia && ia > 0 && ahead != null ? "−" + ia.ToString("0.0", CultureInfo.InvariantCulture) : "";
+        aheadTxt = me.IntervalSeconds is double ia && ia > 0 && ahead != null ? "-" + ia.ToString("0.0", CultureInfo.InvariantCulture) : "";
         aheadName = ahead != null ? NameFormat.Broadcast(ahead).ToUpperInvariant() : "";
         behindTxt = behind?.IntervalSeconds is double ib && ib > 0 ? "+" + ib.ToString("0.0", CultureInfo.InvariantCulture) : "";
         behindName = behind != null ? NameFormat.Broadcast(behind).ToUpperInvariant() : "";

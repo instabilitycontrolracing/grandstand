@@ -89,6 +89,7 @@ public sealed class StartingGridRenderer : IDisposable
     public SKRect ScreenRect;
     int introState;
     double rearmT = -1;   // #421: the replay clock last frame (going backwards in the pre-race re-arms the intro)
+    string introSessionKey = "";
     double preSinceMs = -1;   // when this pre-race session was first drawn (the early opener waits a few seconds)   // 0 = not started, 1 = intro logos, 2 = scripted board during the song, 3 = normal on/off cycle
     readonly GridIntro intro = new();
 
@@ -196,7 +197,12 @@ public sealed class StartingGridRenderer : IDisposable
         // 2026-10-24 (choppy intro): before the opener, get its pictures decoded / keyed / laid out in the
         // background and uploaded to the graphics card, so its first frames don't do it
         if (pre && introState == 0) { intro.Prewarm(snap); intro.WarmGpu(canvas, ScreenRect, snap); }
-        if (!pre) { boardCycleStartMs = -1; introState = 0; intro.Reset(); CardsStartMs = -1; MusicEndMs = -1; preSinceMs = -1; }
+        // 2026-11-06: a different race (new session) while still in a pre-race starts the opener fresh too - the Live view's
+        // "Pre-race show, from the top" goes pre-race -> pre-race and the opener used to think it had already played
+        // (a single-card preview draws a keyless sample snapshot - that never counts as a new race)
+        bool newRace = snap.SessionKey.Length > 0 && introSessionKey.Length > 0 && snap.SessionKey != introSessionKey;
+        if (snap.SessionKey.Length > 0) introSessionKey = snap.SessionKey;
+        if (!pre || newRace) { boardCycleStartMs = -1; introState = 0; intro.Reset(); CardsStartMs = -1; MusicEndMs = -1; preSinceMs = -1; }
         else if (introState == 0 && preSinceMs < 0) preSinceMs = elapsedMs;
         // 2026-10-25 (Angelo: "start the intro as soon as qualifying ends"): iRacing publishes the qualifying result
         // the moment qualifying finishes, so once the race session is loaded and the grid is known the opener
@@ -227,7 +233,9 @@ public sealed class StartingGridRenderer : IDisposable
             // globe beat on the series hit, iRacing + series sharing the first page (Angelo 2026-10-20);
             // original theme either way (grid_opener_globe.mp3 kept as a spare, unused)
             bool globe = GridIntro.GlobeOpener && GlobeIntro.Ready(snap);
-            intro.Start(elapsedMs, PlayOpener(), globe);
+            bool music = PlayOpener();
+            intro.Start(elapsedMs, music, globe);
+            OverlayLog.Write($"[opener] started - music {(music ? "playing" : "not playing (switched off, no file, or one already playing)")}");
         }
         // 2026-10-27 (#421, Angelo: "I rewound the replay to watch the intro but it doesn't fire"): in a replay, any
         // rewind / fast-forward / jump that lands us back in the pre-race re-arms the intro (it used to re-arm only if

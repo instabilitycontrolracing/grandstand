@@ -45,7 +45,7 @@ public static class VpLayout
     public static SKRect Story = new(940, 0, 1920, 1080);
     public static bool StoryVisible;
     /// <summary>The featured driver lower third (bottom centre).</summary>
-    public static SKRect Featured = new(576, 853, 1344, 1064);
+    public static SKRect Featured = new(461, 853, 1459, 1064);   // #942: wider (car column)
     public static bool FeaturedVisible;
     /// <summary>A control-app custom card (right side, under the session bar).</summary>
     public static SKRect Custom = new(1336, 150, 1896, 520);

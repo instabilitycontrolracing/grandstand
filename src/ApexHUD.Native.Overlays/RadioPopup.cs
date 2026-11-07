@@ -21,7 +21,11 @@ public static class RadioFeed
     {
         if (string.IsNullOrWhiteSpace(text)) return;
         // #619: race control goes to its own bar at the top of the screen while that is on (the radio card stays team radio)
-        if (RaceControlBar.On && string.Equals(who.Trim(), "RACE CONTROL", StringComparison.OrdinalIgnoreCase)) { RaceControlBar.PushSpoken(text); return; }
+        // 2026-11-06 (#939, Angelo: "the race control radio should show up where the radio transmissions show up, in the
+        // iRacing style and colours we already established; the session bar drop-down should show just something like
+        // RACE CONTROL - QUALIFYING OPEN in the iRacing colours"): the spoken line (live captions) goes to the radio card's
+        // iRacing race-control design, and the bar under the session bar gets only a short headline
+        if (RaceControlBar.On && string.Equals(who.Trim(), "RACE CONTROL", StringComparison.OrdinalIgnoreCase)) RaceControlBar.PushSummary(text);
         if (incoming.Count > 6) incoming.TryDequeue(out _);    // never pile up a backlog
         incoming.Enqueue(new Line(who.Trim().ToUpperInvariant(), text.Trim()));
     }

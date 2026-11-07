@@ -19,11 +19,12 @@ public sealed partial class PreRaceCards : IDisposable
     const double InS = 0.45, HoldS = 12.0, OutS = 0.4, GapS = 0.25;
     static double SlotS => InS + HoldS + OutS + GapS;
 
-    enum Kind { Weather, RaceInfo, Poles, PartnerAB, TrackFacts, Driver, PartnerStorm, Globe }
+    enum Kind { Weather, RaceInfo, Poles, PartnerAB, TrackFacts, Driver, PartnerStorm, Globe, Watch }
     // 2026-10-25 (Angelo: "reorder those cards that play before green flag to tell the story of what is about to happen"):
     // where we are (track) -> the conditions (weather) -> what today's race is -> who starts at the front -> who to watch,
     // partners in between
-    static readonly Kind[] FullOrder = { Kind.TrackFacts, Kind.Weather, Kind.RaceInfo, Kind.PartnerAB, Kind.Poles, Kind.Globe, Kind.Driver, Kind.PartnerStorm };
+    // 2026-11-06: + Drivers to watch (DriversToWatch) right after the pole sitters - who's at the front, then who to watch
+    static readonly Kind[] FullOrder = { Kind.TrackFacts, Kind.Weather, Kind.RaceInfo, Kind.PartnerAB, Kind.Poles, Kind.Watch, Kind.Globe, Kind.Driver, Kind.PartnerStorm };
     /// <summary>The track card or Today's Race card is up - the replay director takes the blimp shot (Angelo 2026-10-25).</summary>
     public static bool ScenicNow { get; private set; }
     // the globe flies in right before the track card - only as a half-screen panel, and only once
@@ -31,8 +32,58 @@ public sealed partial class PreRaceCards : IDisposable
     // (2026-10-20: the globe moved into the broadcast opener, so it no longer plays as a card)
     // partner panels only while that partner is switched on in sponsors.json (all on by default)
     static Kind[] OrderFor(RaceSnapshot s, bool panels) => FullOrder.Where(k => k != Kind.Globe
+        && (k != Kind.Watch || (ShowWatch && DriversToWatch.For(s).Count >= 2))
         && (k != Kind.PartnerAB || SponsorPack.For("PreRacePanelAB") == Partner.AB)
         && (k != Kind.PartnerStorm || SponsorPack.For("PreRacePanelStorm") == Partner.Storm)).ToArray();
+    /// <summary>2026-11-06 (#901): the pre-race cards in order and what each will show - for the commentator's booth.</summary>
+    public static List<(string Card, List<string> Notes)> BoothPreview(RaceSnapshot s)
+    {
+        var res = new List<(string Card, List<string> Notes)>();
+        try
+        {
+            foreach (var k in OrderFor(s, true))
+            {
+                var n = new List<string>();
+                if (k == Kind.TrackFacts)
+                {
+                    n.Add(s.TrackDisplayName ?? "");
+                    LapFor(s);
+                    if (lapStops is { Count: > 0 }) n.Add("The lap walk: " + string.Join(", ", lapStops.Select(x => x.Name)));
+                }
+                else if (k == Kind.Weather)
+                    n.Add($"Air {s.AirTempC * 9 / 5 + 32:0} F ({s.AirTempC:0} C), track {s.TrackTempC * 9 / 5 + 32:0} F ({s.TrackTempC:0} C)" + (s.IsRaining ? ", raining" : ""));
+                else if (k == Kind.RaceInfo)
+                {
+                    n.Add(string.Join(", ", s.ClassLeaderboard.Select(cl => $"{cl.Drivers.Count} {cl.Name}")) + " cars");
+                    if (s.TotalLaps is > 0 and < 2000) n.Add($"{s.TotalLaps} laps");
+                    else if (s.SessionTimeRemaining > 0) n.Add($"{Math.Round(s.SessionTimeRemaining / 60)} minutes");
+                }
+                else if (k == Kind.Poles)
+                {
+                    foreach (var cl in s.ClassLeaderboard)
+                    {
+                        var pole = cl.Drivers.FirstOrDefault(d => s.GridClassPositions.TryGetValue(d.CarIdx, out var g1) && g1 == 1);
+                        if (pole != null) n.Add($"{cl.Name} pole: #{pole.CarNumber} {pole.Name}" + (pole.QualifyTime > 0 ? $" ({LapTimeFormat.Lap(pole.QualifyTime)})" : ""));
+                    }
+                }
+                else if (k == Kind.Watch)
+                {
+                    foreach (var pk in DriversToWatch.For(s)) n.Add($"{pk.Tag}: #{pk.Number} {pk.Name} ({pk.ClassName}) - {pk.Reason}");
+                }
+                else if (k == Kind.Driver && s.Player is { } me)
+                    n.Add($"#{me.CarNumber} {me.Name} - {me.CarName}, starts P{(s.GridClassPositions.TryGetValue(me.CarIdx, out var g2) ? g2 : me.PositionInClass)} in {me.ClassName}");
+                else if (k == Kind.PartnerAB) n.Add("A&B General Contracting");
+                else if (k == Kind.PartnerStorm) n.Add("Closing partner panel before the start");
+                n.RemoveAll(string.IsNullOrWhiteSpace);
+                string name = k switch { Kind.TrackFacts => "Track intro", Kind.Weather => "Weather", Kind.RaceInfo => "Today's race", Kind.Poles => "Pole sitters",
+                    Kind.Watch => "Drivers to watch", Kind.Driver => "Driver card", Kind.PartnerAB => "Partner", Kind.PartnerStorm => "Closing partner", _ => k.ToString() };
+                res.Add((name, n));
+            }
+        }
+        catch { }
+        return res;
+    }
+
     static double HoldFor(Kind k) => k == Kind.Globe ? GlobeIntro.Length - 0.2
         : k == Kind.TrackFacts && lapStops is { Count: > 0 } ? Math.Clamp(WalkStartS + lapStops.Count * WalkStepS + 8.4, HoldS, 190) : HoldS;
 
@@ -324,6 +375,7 @@ public sealed partial class PreRaceCards : IDisposable
             case Kind.Weather:      DrawWeather(c, r, snap, a); break;
             case Kind.RaceInfo:     DrawRaceInfo(c, r, snap, a); break;
             case Kind.Poles:        DrawPoles(c, r, snap, a); break;
+            case Kind.Watch:        DrawWatch(c, r, snap, a); break;
             case Kind.PartnerAB:    DrawPartnerAB(c, r, a); break;
             case Kind.TrackFacts:   DrawTrackFacts(c, r, snap, a); break;
             case Kind.Driver:       DrawDriver(c, r, snap, a); break;
@@ -878,6 +930,47 @@ public sealed partial class PreRaceCards : IDisposable
             using (var np = P(Fonts.CormorantGaramond.Bold, 34, Txt, a))
             { string nm = NameFormat.Broadcast(d); FitSize(np, nm, colW - 14, 18); c.DrawText(Fit(nm, np, colW - 14), x, r.Top + 92, np); }
             using (var tp = P(Fonts.Inter.SemiBold, 17, Txt2, a)) c.DrawText(Lap(d.QualifyTime) + "   #" + d.CarNumber, x, r.Top + 124, tp);
+        }
+        c.Restore();
+    }
+
+    /// <summary>2026-11-06: the Drivers to watch card can be switched off (Settings / the producer page; control.json driversToWatch).</summary>
+    public static bool ShowWatch = true;
+
+    /// <summary>2026-11-06: DRIVERS TO WATCH - three drivers and why (DriversToWatch): the tag in gold over the class colour,
+    /// the name, then the number that makes the case (lap time / grid slot / iRating) and the reason.</summary>
+    void DrawWatch(SKCanvas c, SKRect r, RaceSnapshot s, float a)
+    {
+        c.Save();
+        c.ClipRect(new SKRect(r.Left, r.Top, r.Left + 30 + 300 * K(0.0, 0.45), r.Bottom));
+        Headline(c, "DRIVERS TO WATCH", r.Left + 30, r.MidY + 12, 284, 52, a);
+        c.Restore();
+        using (var ln = new SKPaint { Color = Gold.WithAlpha((byte)(200 * a)) })
+            c.DrawRect(new SKRect(r.Left + 30, r.MidY + 28, r.Left + 30 + 90 * K(0.35, 0.35), r.MidY + 30), ln);
+        Divider(c, r.Left + 330, r, a);
+        var picks = DriversToWatch.For(s);
+        int n = Math.Min(3, picks.Count);
+        if (n == 0) return;
+        float colW = (r.Right - 30 - (r.Left + 362)) / n;
+        c.Save();
+        c.ClipRect(new SKRect(r.Left + 340, r.Top, r.Right - 4, r.Bottom));
+        float aBase = a;
+        for (int i = 0; i < n; i++)
+        {
+            var p = picks[i];
+            float k = Ease((float)Math.Clamp((cardLocal - 0.45 - i * 0.22) / 0.5, 0, 1));
+            if (k <= 0) continue;
+            float x = r.Left + 362 + i * colW + (1 - k) * 60;
+            a = aBase * k;
+            var cc = SKColor.TryParse(p.ClassColor.StartsWith('#') ? p.ClassColor : "#" + p.ClassColor, out var pc) ? pc : Gold;
+            using (var bar = new SKPaint { IsAntialias = true, Color = cc.WithAlpha((byte)(255 * a)) })
+                c.DrawRoundRect(new SKRect(x, r.Top + 24, x + 4, r.Top + 46), 2, 2, bar);
+            using (var tp = P(Fonts.Inter.Bold, 12, Gold, a))
+                TextTracked.Draw(c, tp, (p.Tag + " · " + ClassLogo.DisplayName(p.ClassName)).ToUpperInvariant(), x + 12, r.Top + 40, 2.4f);
+            using (var np = P(Fonts.CormorantGaramond.Bold, 30, Txt, a))
+            { string nm = p.Name + "  #" + p.Number; FitSize(np, nm, colW - 16, 17); c.DrawText(Fit(nm, np, colW - 16), x, r.Top + 80, np); }
+            using (var vp = P(Fonts.Inter.Bold, 17, Gold, a)) c.DrawText(Fit(p.Value, vp, colW - 16), x, r.Top + 106, vp);
+            using (var rp = P(Fonts.Inter.Medium, 12.5f, Txt2, a)) { FitSize(rp, p.Reason, colW - 16, 9.5f); c.DrawText(Fit(p.Reason, rp, colW - 16), x, r.Top + 128, rp); }
         }
         c.Restore();
     }
