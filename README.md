@@ -14,6 +14,37 @@
 
 ---
 
+## See it race: Le Mans
+
+A full iRacing race at the Circuit de la Sarthe, recorded in 4K with Grandstand and the replay director doing every camera cut on its own. No editing, no manual graphics.
+
+<div align="center">
+<img src="docs/media/lemans/tv-opener.gif" alt="The Le Mans TV opener" width="49%"> <img src="docs/media/lemans/battle-card.gif" alt="A live battle card" width="49%">
+
+**[▶ Watch the trailer and the race highlights on YouTube](https://www.youtube.com/channel/UCBPmq-u4EycZY4sN7jt4scg)**
+</div>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/media/lemans/race-start.jpg" alt="Race start"><br><b>The start</b><br>Timing tower, session bar and the class ticker from the green flag.</td>
+<td width="50%"><img src="docs/media/lemans/battle-card.jpg" alt="Battle card"><br><b>Battle cards</b><br>Who's attacking, the gap and whether it's closing, with a minimap of where they're fighting.</td>
+</tr>
+<tr>
+<td><img src="docs/media/lemans/three-way.jpg" alt="Three-way fight"><br><b>Three-way fights</b><br>The director spots them and stays on them.</td>
+<td><img src="docs/media/lemans/slowmo-replay.jpg" alt="Slow-motion replay"><br><b>Slow-motion replays</b><br>Spins and offs get replayed, TV style.</td>
+</tr>
+<tr>
+<td><img src="docs/media/lemans/onboard.jpg" alt="Qualifying coverage"><br><b>Qualifying</b><br>The live qualifying tower, the session clock and a minimap of where the car is on the lap.</td>
+<td><img src="docs/media/lemans/pit-lane.jpg" alt="Pit lane"><br><b>Pit lane battles</b><br>Two cars in the pits together? Entry to exit, and who comes out first.</td>
+</tr>
+<tr>
+<td><img src="docs/media/lemans/qualifying-board.jpg" alt="Qualifying board"><br><b>Qualifying board</b><br>The grid as it was set, class by class.</td>
+<td><img src="docs/media/lemans/classification.jpg" alt="Final classification"><br><b>Final classification</b><br>Every class, every finisher, at the flag.</td>
+</tr>
+</table>
+
+---
+
 ## Hey, I'm the guy who made this
 
 I race the BMW M4 GT3 and the M Hybrid V8 on iRacing, and I always wanted my races to look like the real thing on TV. The globe spinning to the circuit, the starting grid, the timing tower, the little cards that pop up when somebody pits or sets a fastest lap. The stuff that makes a 45-minute sprint feel like Le Mans.
